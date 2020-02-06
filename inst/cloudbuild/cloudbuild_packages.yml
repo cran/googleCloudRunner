@@ -1,0 +1,53 @@
+options:
+  env:
+  - 'CR_REGION=$_REGION'
+  - 'GCE_DEFAULT_PROJECT_ID=$PROJECT_ID'
+  - 'CR_BUILD_EMAIL=$_BUILD_EMAIL'
+  - 'GCS_DEFAULT_BUCKET=$_BUCKET'
+  - 'GCE_AUTH_FILE=/workspace/auth.json'
+  - 'NOT_CRAN=true'
+timeout: "1200s"
+steps:
+- name: 'gcr.io/cloud-builders/gcloud'
+  args:
+  - kms
+  - decrypt
+  - --ciphertext-file=auth.json.enc
+  - --plaintext-file=auth.json
+  - --location=global
+  - --keyring=my-keyring
+  - --key=gce-auth-file
+- name: 'gcr.io/gcer-public/packagetools:master'
+  id: Devtools checks
+  args:
+  - "Rscript"
+  - "-e"
+  - |
+    message("cran mirror: ", getOption("repos"))
+    library(devtools)
+    install_dev_deps(upgrade="always")
+    check()
+    install()
+- name: 'gcr.io/gcer-public/packagetools:master'
+  id: Good Practices
+  args:
+  - "Rscript"
+  - "-e"
+  - |
+    library(goodpractice)
+    gp(checks = grep('(rcmdcheck|covr)', all_checks(), invert=TRUE, value=TRUE))
+- name: 'gcr.io/gcer-public/packagetools:master'
+  id: codecovr checks
+  env:
+  - 'CODECOV_TOKEN=$_CODECOV_TOKEN'
+  args:
+  - "Rscript"
+  - "-e"
+  - |
+    devtools::install_dev_deps()
+    devtools::install()
+    library(covr)
+    cv <- package_coverage()
+    print(cv);
+    codecov(coverage=cv, commit = '$COMMIT_SHA', branch = '$BRANCH_NAME')
+
