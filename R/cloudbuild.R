@@ -89,8 +89,7 @@ cr_build <- function(x,
                            images = images,
                            artifacts = artifacts,
                            options = options,
-                           substitutions = substitutions,
-                           projectId = projectId)
+                           substitutions = substitutions)
   }
 
 
@@ -148,25 +147,25 @@ extract_logs <- function(o){
 #' @examples
 #' cloudbuild <- system.file("cloudbuild/cloudbuild.yaml",
 #'                            package = "googleCloudRunner")
-#' cr_build_make(cloudbuild, projectId = "test-project")
+#' cr_build_make(cloudbuild)
 cr_build_make <- function(yaml,
                           source = NULL,
                           timeout=NULL,
                           images=NULL,
                           artifacts = NULL,
                           options = NULL,
-                          substitutions = NULL,
-                          projectId = cr_project_get()){
-
-  assert_that(
-    is.string(projectId)
-  )
-
-  timeout <- check_timeout(timeout)
+                          substitutions = NULL){
 
   stepsy <- get_cr_yaml(yaml)
   if(is.null(stepsy$steps)){
     stop("Invalid cloudbuild yaml - 'steps:' not found.", call. = FALSE)
+  }
+
+  timeout <- check_timeout(timeout)
+  if(is.null(timeout)){
+    if(!is.null(stepsy$timeout)){
+      timeout <- stepsy$timeout
+    }
   }
 
   if(!is.null(source)){

@@ -89,6 +89,10 @@ cr_buildstep <- function(name,
     prefix <- "gcr.io/cloud-builders/"
   }
 
+  if(!is.null(entrypoint)){
+    assert_that(is.string(entrypoint))
+  }
+
   if(dir %in% c("",NA)) dir <- NULL
 
   if(grepl("^gcr.io", name)){
@@ -98,11 +102,11 @@ cr_buildstep <- function(name,
   list(structure(
     rmNullObs(list(
       name = paste0(prefix, name),
-      entrypoint = string_to_list(entrypoint),
+      entrypoint = entrypoint,
       args = string_to_list(args),
       id = id,
       dir = dir,
-      env = env,
+      env = string_to_list(env),
       volumes = volumes,
       waitFor = string_to_list(waitFor)
     )), class = c("cr_buildstep","list")))

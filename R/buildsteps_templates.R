@@ -1,3 +1,53 @@
+#' Do R package tests and upload to Codecov
+#'
+#' This lets you run R package tests and is intended to be used in a trigger when you push to a repository so you can monitor code quality.
+#'
+#' @param codecov_token If using codecov, supply your codecov token here. Default assumes you add it to the Cloud Build substitution macros, which is more secure and recommended.
+#' @param test_script The script that will run first making tests.  If \code{NULL} a default script it used
+#' @param codecov_script The script that will run first making tests.  If \code{NULL} a default script it used
+#' @param build_image The docker image that will be used to run the R code for the test scripts
+#' @param env Environment arguments to be set during the test script runs
+#'
+#' @export
+#'
+#' @examples
+#'
+#' cr_buildstep_packagetests()
+#'
+cr_buildstep_packagetests <- function(test_script = NULL,
+                                      codecov_script = NULL,
+                                      codecov_token = "$_CODECOV_TOKEN",
+                                      build_image = "gcr.io/gcer-public/packagetools:master",
+                                      env = c("NOT_CRAN=true")){
+
+  if(is.null(test_script)){
+    test_script <- system.file("r_buildsteps", "devtools_tests.R",
+                               package = "googleCloudRunner",
+                               mustWork = TRUE)
+  }
+
+
+  test_bs <- cr_buildstep_r(
+    test_script,
+    name = build_image,
+    env = env
+  )
+
+  codecov_bs <- NULL
+  if(!is.null(codecov_token)){
+    codecov_bs <- cr_buildstep_r(
+      system.file("r_buildsteps", "codecov_tests.R",
+                  package = "googleCloudRunner", mustWork = TRUE),
+      name = build_image,
+      env = c(env, paste0("CODECOV_TOKEN=", codecov_token))
+    )
+  }
+
+  c(test_bs, codecov_bs)
+
+}
+
+
 #' Send a Slack message to a channel from a Cloud Build step
 #'
 #' This uses https://github.com/technosophos/slack-notify to send Slack messages
@@ -194,6 +244,7 @@ cr_buildstep_run <- function(name,
                              allowUnauthenticated = TRUE,
                              region = cr_region_get(),
                              concurrency = 80,
+                             port = NULL,
                              ...){
 
   # don't allow dot names that would break things
@@ -222,14 +273,18 @@ cr_buildstep_run <- function(name,
     auth_step <- NULL
   }
 
+  if(is.null(port)){
+    port <- "default"
+  }
 
   c(
     cr_buildstep("gcloud",
-                   c("run","deploy", name,
+                   c("beta","run","deploy", name,
                      "--image", image,
                      "--region", region,
                      "--platform", "managed",
                      "--concurrency", concurrency,
+                     "--port", port,
                      auth_calls
                    ),
                    id = "deploy cloudrun",
@@ -282,9 +337,15 @@ cr_buildstep_bash <- function(bash_script,
                                 code_source = bash_source,
                                 file_grep = "\\.(bash|sh)$")
 
+  # avoid having two bashes
+  arg <- c("bash","-c", bchars)
+  if(!is.null(dots$entrypoint) && dots$entrypoint == "bash"){
+    arg <- c("-c", bchars)
+  }
+
   cr_buildstep(name = name,
                prefix = "",
-               args = c("bash","-c", bchars),
+               args = arg,
                ...)
 }
 
@@ -292,7 +353,7 @@ cr_buildstep_bash <- function(bash_script,
 #'
 #' Helper to run R code within build steps, from either an existing local R file or within the source of the build.
 #'
-#' @param r R code to run or a file containing R code ending with .R
+#' @param r R code to run or a file containing R code ending with .R, or the gs:// location on Cloud Storage of the R file you want to run
 #' @param name The docker image that will run the R code, usually from rocker-project.org
 #' @param r_source Whether the R code will be from a runtime file within the source or at build time copying over from a local R file in your session
 #' @param ... Other arguments passed to \link{cr_buildstep}
@@ -304,6 +365,8 @@ cr_buildstep_bash <- function(bash_script,
 #' If \code{r_source="runtime"} then \code{r} should be the location of that file within the source or \code{image} that will be run by the R code from \code{image}
 #'
 #' If \code{r_source="local"} then it will copy over from a character string or local file into the build step directly.
+#'
+#' If the R code location starts with \code{gs://} then an extra buildstep will be added that will download the R script from that location then run it as per \code{r_source="runtime"}.  This will consequently override your setting of \code{r_source}
 #'
 #' @examples
 #' cr_project_set("my-project")
@@ -356,12 +419,42 @@ cr_buildstep_r <- function(r,
     is.null(dots$prefix)
   )
 
+  # ability to call R scripts from Cloud Storage
+  if(grepl("^gs://", r[[1]])){
+    r_here <- paste0("/workspace/", basename(r))
+    myMessage(paste0("Buildstep will download R script from ", r),
+              level = 3)
+    gs <- c(
+      cr_buildstep(
+        "gsutil",
+        id = paste("download r script"),
+        args = c("cp", r, r_here)
+      ),
+      cr_buildstep_r(
+        r_here,
+        name = name,
+        r_source = "runtime",
+        prefix = prefix,
+        ...
+      )
+    )
+
+    return(gs)
+
+  }
+
   rchars <- read_buildstep_file(r,
                                 code_source = r_source,
                                 file_grep = "\\.R$")
 
+  if(r_source == "local"){
+    r_args <- c("Rscript", "-e", rchars)
+  } else if(r_source == "runtime"){
+    r_args <- c("Rscript", rchars)
+  }
+
   cr_buildstep(name = name,
-               args = c("Rscript", "-e", rchars),
+               args = r_args,
                prefix = prefix,
                ...)
 
@@ -371,6 +464,7 @@ cr_buildstep_r <- function(r,
 read_buildstep_file <- function(x,
                                 code_source = c("local","runtime"),
                                 file_grep = ".*") {
+
   code_source <- match.arg(code_source)
   rchars <- x
   if(code_source == "local"){
@@ -391,6 +485,10 @@ read_buildstep_file <- function(x,
     myMessage("Will read code in source from filepath ", rchars, level = 3)
   }
 
+  if(nchar(rchars) == 0){
+    stop("No code found to input into buildstep", call. = FALSE)
+  }
+
   rchars
 }
 
@@ -398,7 +496,8 @@ read_buildstep_file <- function(x,
 
 #' Create a build step for decrypting files via KMS
 #'
-#' Create a build step to decrypt files using CryptoKey from Cloud Key Management Service
+#' Create a build step to decrypt files using CryptoKey from Cloud Key Management Service.
+#' Usually you will prefer to use \link{cr_buildstep_secret}
 #'
 #' @param cipher The file that has been encrypted
 #' @param plain The file location to decrypt to
@@ -412,7 +511,7 @@ read_buildstep_file <- function(x,
 #'
 #' @section Setup:
 #'
-#' You will need to set up the \href{https://cloud.google.com/cloud-build/docs/securing-builds/use-encrypted-secrets-credentials}{encrypted key using gcloud} following the link from Google
+#' You will need to set up the \href{https://cloud.google.com/cloud-build/docs/securing-builds/use-encrypted-secrets-credentials#encrypt_credentials}{encrypted key using gcloud} following the link from Google
 #'
 #' @family Cloud Buildsteps
 #' @export
@@ -447,6 +546,51 @@ cr_buildstep_decrypt <- function(cipher,
                ...)
 }
 
+#' Create a buildstep for using Secret Manager
+#'
+#' This is the preferred way to manage secrets, rather than
+#'   \link{cr_buildstep_decrypt}, as it stores the encrypted file in the cloud
+#'   rather than in your project workspace.
+#'
+#' @seealso How to set up secrets using \href{https://cloud.google.com/cloud-build/docs/securing-builds/use-encrypted-secrets-credentials}{Secret Manager}
+#'
+#' @param secret The secret data name in Secret Manager
+#' @param decrypted The name of the file the secret will be decrypted into
+#' @param version The version of the secret
+#' @param ... Other arguments sent to \link{cr_buildstep_bash}
+#'
+#' @details
+#'
+#' This is for downloading encrypted files from Google Secret Manager.  You will need to add the
+#'   Secret Accessor Cloud IAM role to the Cloud Build service account to use it.
+#' Once you have uploaded your secret file and named it, it is available for Cloud
+#'   Build to use.
+#' @family Cloud Buildsteps
+#' @export
+#' @examples
+#' cr_buildstep_secret("my_secret", decrypted = "/workspace/secret.json")
+#'
+cr_buildstep_secret <- function(secret,
+                                decrypted,
+                                version = "latest",
+                                ...){
+
+  script <- sprintf("gcloud secrets versions access %s --secret=%s > %s",
+    version, secret, decrypted
+  )
+
+  cr_buildstep(
+    args = c("-c", script),
+    name = "gcr.io/cloud-builders/gcloud",
+    entrypoint = "bash",
+    ...
+  )
+
+}
+
+
+
+
 #' Create a build step to build and push a docker image
 #'
 #' @param image The image tag that will be pushed, starting with gcr.io or created by combining with \code{projectId} if not starting with gcr.io
@@ -454,6 +598,7 @@ cr_buildstep_decrypt <- function(cipher,
 #' @param location Where the Dockerfile to build is in relation to \code{dir}
 #' @param ... Further arguments passed in to \link{cr_buildstep}
 #' @param projectId The projectId
+#' @param dockerfile Specify the name of the Dockerfile found at \code{location}
 #' @family Cloud Buildsteps
 #' @export
 #' @import assertthat
@@ -480,6 +625,7 @@ cr_buildstep_docker <- function(image,
                                 tag = "$BUILD_ID",
                                 location = ".",
                                 projectId = cr_project_get(),
+                                dockerfile = "Dockerfile",
                                 ...){
   # don't allow dot names that would break things
   dots <- list(...)
@@ -502,7 +648,11 @@ cr_buildstep_docker <- function(image,
   myMessage("Image to be built: ", the_image, level = 3)
 
   c(
-    cr_buildstep("docker", c("build","-t",the_image,location), ...),
+    cr_buildstep("docker",
+                 c("build",
+                   "-f", dockerfile,
+                   "-t",the_image,location),
+                 ...),
     cr_buildstep("docker", c("push", the_image), ...)
   )
 }
@@ -511,14 +661,11 @@ cr_buildstep_docker <- function(image,
 #'
 #' This creates steps to configure git to use an ssh created key.
 #'
-#' @param keyring The Key Management Store keyring containing the git ssh key
-#' @param key The Key Management Store key containing the gitssh key
-#' @param cipher The filename of the encrypted git ssh key that has been checked into the repository
+#' @param secret The name of the secret on Google Secret Manager for the git ssh private key
+#' @param post_setup Steps that occur after git setup
 #' @details
 #'
-#' The key should be encrypted offline using \code{gcloud kms} or similar first.  See \link{cr_buildstep_decrypt} for details.
-#'
-#' By default the encrypted key should then be at the root of your \link{Source} object called "id_rsa.enc"
+#' The ssh private key should be uploaded to Google Secret Manager first
 #'
 #' @seealso \href{https://cloud.google.com/cloud-build/docs/access-private-github-repos}{Accessing private GitHub repositories using Cloud Build (google article)}
 #'
@@ -528,39 +675,30 @@ cr_buildstep_docker <- function(image,
 #' cr_project_set("my-project")
 #' cr_bucket_set("my-bucket")
 #'
-#' # assumes you have previously saved git ssh key via KMS called "git_key"
+#' # assumes you have previously saved git ssh key called "github-ssh"
 #' cr_build_yaml(
 #'      steps = c(
-#'           cr_buildstep_gitsetup("my_keyring", "git_key"),
+#'           cr_buildstep_gitsetup("github-ssh"),
 #'           cr_buildstep_git(c("clone",
 #'                              "git@github.com:github_name/repo_name"))
 #'      )
 #'  )
 #'
-cr_buildstep_gitsetup <- function(keyring = "my-keyring",
-                                  key = "github-key",
-                                  cipher = "id_rsa.enc", ...){
-  # don't allow dot names that would break things
-  dots <- list(...)
-  assert_that(
-    is.null(dots$name),
-    is.null(dots$args),
-    is.null(dots$prefix),
-    is.null(dots$entrypoint)
-  )
+cr_buildstep_gitsetup <- function(secret, post_setup = NULL){
 
-  cb <- system.file("cloudbuild/cloudbuild_git.yml",
-                    package = "googleCloudRunner")
-  bs <- cr_build_make(cb)
-
-
+  github_setup <- system.file("ssh", "github_setup.sh",
+                              package = "googleCloudRunner")
   c(
-    cr_buildstep_decrypt(cipher = cipher,
-                         plain = "/root/.ssh/id_rsa",
-                         keyring = keyring,
-                         key = key,
-                         volumes = git_volume()),
-    cr_buildstep_extract(bs, 2)
+    cr_buildstep_secret(secret = secret,
+                        decrypted = "/root/.ssh/id_rsa",
+                        volumes = git_volume(),
+                        id = "git secret"),
+    cr_buildstep_bash(github_setup,
+                      name = "gcr.io/cloud-builders/git",
+                      entrypoint = "bash",
+                      volumes = git_volume(),
+                      id = "git setup script"),
+    post_setup
   )
 }
 
@@ -576,11 +714,12 @@ cr_buildstep_gitsetup <- function(keyring = "my-keyring",
 #' \code{cr_buildstep} must come after \code{cr_buildstep_gitsetup}
 #' @family Cloud Buildsteps
 #' @export
+#' @import assertthat
 cr_buildstep_git <- function(
   git_args = c("clone",
                "git@github.com:[GIT-USERNAME]/[REPOSITORY]",
                "."),
-                             ...){
+  ...){
   # don't allow dot names that would break things
   dots <- list(...)
   assert_that(
@@ -593,7 +732,8 @@ cr_buildstep_git <- function(
   cr_buildstep(
     "git",
     args = git_args,
-    volumes = git_volume()
+    volumes = git_volume(),
+    ...
   )
 }
 
@@ -605,59 +745,68 @@ cr_buildstep_git <- function(
 #' @param env A character vector of env arguments to set for all steps
 #' @param git_email The email the git commands will be identifying as
 #' @param build_image A docker image with \code{pkgdown} installed
+#' @param post_clone A \link{cr_buildstep} that occurs after the repo is cloned
 #'
 #' @details
 #'
 #' Its convenient to set some of the above via \link{Build} macros, such as \code{github_repo=$_GITHUB_REPO} and \code{git_email=$_BUILD_EMAIL} in the Build Trigger web UI
+#'
+#' To commit the website to git, \link{cr_buildstep_gitsetup} is used for which
+#'   you will need to add your git ssh private key to Google Secret Manager
+#'
+#' The R package is installed via \link[devtools]{install} before
+#'   running \link[pkgdown]{build_site}
 #'
 #' @export
 #' @family Cloud Buildsteps
 #' @examples
 #' cr_project_set("my-project")
 #' cr_bucket_set("my-bucket")
+#'
+#' # set github repo directly to write it out via cr_build_write()
+#' cr_buildstep_pkgdown("MarkEdmondson1234/googleCloudRunner",
+#'                      git_email = "cloudbuild@google.com",
+#'                      secret = "github-ssh")
+#'
 #' # github repo set via build trigger macro _GITHUB_REPO
 #' cr_buildstep_pkgdown("$_GITHUB_REPO",
-#'                      "cloudbuild@google.com")
+#'                      git_email = "cloudbuild@google.com",
+#'                      secret = "github-ssh")
 #'
 #' # example including environment arguments for pkgdown build step
-#' steps <- cr_buildstep_pkgdown("$_GITHUB_REPO",
-#'                      "cloudbuild@google.com",
+#' cr_buildstep_pkgdown("$_GITHUB_REPO",
+#'                      git_email = "cloudbuild@google.com",
+#'                      secret = "github-ssh",
 #'                      env = c("MYVAR=$_MY_VAR", "PROJECT=$PROJECT_ID"))
-#' build_yaml <- cr_build_yaml(steps = steps)
-#' my_source <- cr_build_source(RepoSource("my_repo", branch="master"))
-#' build <- cr_build_make(build_yaml, source = my_source)
+#'
 cr_buildstep_pkgdown <- function(
            github_repo,
            git_email,
-           keyring = "my-keyring",
-           key = "github-key",
+           secret,
            env = NULL,
-           cipher = "id_rsa.enc",
-           build_image = 'gcr.io/gcer-public/packagetools:master'){
-
-  pd <- system.file("cloudbuild/cloudbuild_pkgdown.yml",
-                    package = "googleCloudRunner")
-
-  # In yaml.load: NAs introduced by coercion: . is not a real
-  pdb <- suppressWarnings(cr_build_make(pd))
+           build_image = "gcr.io/gcer-public/packagetools:master",
+           post_setup = NULL,
+           post_clone = NULL){
 
   repo <- paste0("git@github.com:", github_repo)
-  pkg <- cr_buildstep_extract(pdb, 4)
-  pkg_env <- cr_buildstep_edit(pkg, env = env, dir = "repo")
 
   c(
-    cr_buildstep_gitsetup(keyring = keyring,
-                          key = key,
-                          cipher = cipher),
-    cr_buildstep_git(c("clone",repo, "repo")),
-    pkg_env,
+    cr_buildstep_gitsetup(secret, post_setup = post_setup),
+    cr_buildstep_git(c("clone",repo, "repo"), id = "clone to repo dir"),
+    post_clone,
+    cr_buildstep_r(c("devtools::install()",
+                     "pkgdown::build_site()"),
+                   name = build_image,
+                   dir = "repo",
+                   env = env,
+                   id = "build pkgdown"),
     cr_buildstep_git(c("add", "--all"), dir = "repo"),
     cr_buildstep_git(c("commit", "-a", "-m",
                        "[skip travis] Build website from commit ${COMMIT_SHA}: \
 $(date +\"%Y%m%dT%H:%M:%S\")"),
                      dir = "repo"),
-    cr_buildstep_git(c("status"), dir = "repo"),
-    cr_buildstep_git("push", repo, dir = "repo")
+    cr_buildstep_git("status", dir = "repo"),
+    cr_buildstep_git("push", dir = "repo")
   )
 
 }

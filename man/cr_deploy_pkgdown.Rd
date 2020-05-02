@@ -6,31 +6,34 @@
 \usage{
 cr_deploy_pkgdown(
   steps = NULL,
-  cloudbuild_file = "cloudbuild.yml",
+  secret,
+  github_repo = "$_GITHUB_REPO",
+  cloudbuild_file = "cloudbuild-pkgdown.yml",
   git_email = "googlecloudrunner@r.com",
-  keyring = "my-keyring",
-  key = "github-key",
   env = NULL,
-  cipher = "id_rsa.enc",
-  build_image = "gcr.io/gcer-public/packagetools:master"
+  build_image = "gcr.io/gcer-public/packagetools:master",
+  post_setup = NULL,
+  post_clone = NULL
 )
 }
 \arguments{
 \item{steps}{extra steps to run before the pkgdown website steps run}
 
+\item{secret}{The name of the secret on Google Secret Manager for the git ssh private key}
+
+\item{github_repo}{The GitHub repo to deploy pkgdown website from and to.}
+
 \item{cloudbuild_file}{The cloudbuild yaml file to write to}
 
 \item{git_email}{The email the git commands will be identifying as}
 
-\item{keyring}{The Key Management Store keyring containing the git ssh key}
-
-\item{key}{The Key Management Store key containing the gitssh key}
-
 \item{env}{A character vector of env arguments to set for all steps}
 
-\item{cipher}{The filename of the encrypted git ssh key that has been checked into the repository}
-
 \item{build_image}{A docker image with \code{pkgdown} installed}
+
+\item{post_setup}{Steps that occur after git setup}
+
+\item{post_clone}{A \link{cr_buildstep} that occurs after the repo is cloned}
 }
 \description{
 This builds a pkgdown website each time the trigger fires and deploys it to git
@@ -44,19 +47,20 @@ The git ssh keys need to be deployed to Google KMS for the deployment of the web
 }
 \examples{
 
-pd <- cr_deploy_pkgdown()
-file.exists("cloudbuild.yml")
-
-unlink("cloudbuild.yml")
+pd <- cr_deploy_pkgdown(secret = "my_git_secret")
+pd
+file.exists("cloudbuild-pkgdown.yml")
+unlink("cloudbuild-pkgdown.yml")
 
 }
 \seealso{
-Create your own custom deployment using \link{cr_buildstep_pkgdown} which this function uses with some defaults
+Create your own custom deployment using \link{cr_buildstep_pkgdown} which this function uses with some defaults.
 
 Other Deployment functions: 
 \code{\link{cr_deploy_docker}()},
 \code{\link{cr_deploy_git_html}()},
 \code{\link{cr_deploy_github_docker}()},
+\code{\link{cr_deploy_packagetests}()},
 \code{\link{cr_deploy_run}()},
 \code{\link{cr_deploy_r}()}
 }

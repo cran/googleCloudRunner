@@ -6,7 +6,7 @@ options:
   - 'GCS_DEFAULT_BUCKET=$_BUCKET'
   - 'GCE_AUTH_FILE=/workspace/auth.json'
   - 'NOT_CRAN=true'
-timeout: "1200s"
+timeout: "2400s"
 steps:
 - name: 'gcr.io/cloud-builders/gcloud'
   args:
@@ -24,10 +24,8 @@ steps:
   - "-e"
   - |
     message("cran mirror: ", getOption("repos"))
-    library(devtools)
-    install_dev_deps(upgrade="always")
-    check()
-    install()
+    remotes::install_deps(dependencies = TRUE)
+    rcmdcheck::rcmdcheck(args = '--no-manual', error_on = 'warning')
 - name: 'gcr.io/gcer-public/packagetools:master'
   id: Good Practices
   args:
@@ -44,10 +42,7 @@ steps:
   - "Rscript"
   - "-e"
   - |
-    devtools::install_dev_deps()
-    devtools::install()
-    library(covr)
-    cv <- package_coverage()
+    remotes::install_local()
+    cv <- covr::package_coverage()
     print(cv);
-    codecov(coverage=cv, commit = '$COMMIT_SHA', branch = '$BRANCH_NAME')
-
+    covr::codecov(coverage=cv, commit = '$COMMIT_SHA', branch = '$BRANCH_NAME')

@@ -30,7 +30,7 @@ cr_deploy_docker(
 
 \item{timeout}{Amount of time that this build should be allowed to run, to second}
 
-\item{bucket}{The GCS bucker that will be used to deploy code source}
+\item{bucket}{The GCS bucket that will be used to deploy code source}
 
 \item{projectId}{The projectId}
 
@@ -62,6 +62,7 @@ b <- cr_deploy_docker(system.file("example/", package="googleCloudRunner"))
 Other Deployment functions: 
 \code{\link{cr_deploy_git_html}()},
 \code{\link{cr_deploy_github_docker}()},
+\code{\link{cr_deploy_packagetests}()},
 \code{\link{cr_deploy_pkgdown}()},
 \code{\link{cr_deploy_run}()},
 \code{\link{cr_deploy_r}()}

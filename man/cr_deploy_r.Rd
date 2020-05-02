@@ -13,6 +13,7 @@ cr_deploy_r(
   pre_steps = NULL,
   post_steps = NULL,
   timeout = 600L,
+  ...,
   email = cr_email_get(),
   region = cr_region_get(),
   projectId = cr_project_get(),
@@ -20,7 +21,7 @@ cr_deploy_r(
 )
 }
 \arguments{
-\item{r}{R code to run or a file containing R code ending with .R}
+\item{r}{R code to run or a file containing R code ending with .R, or the gs:// location on Cloud Storage of the R file you want to run}
 
 \item{schedule}{A cron schedule e.g. \code{"15 5 * * *"}}
 
@@ -35,6 +36,8 @@ cr_deploy_r(
 \item{post_steps}{Other \link{cr_buildstep} to run after the R code executes}
 
 \item{timeout}{Amount of time that this build should be allowed to run, to second}
+
+\item{...}{Other arguments passed through to \link{cr_buildstep_r}}
 
 \item{email}{The email that will authenticate the job set via \link{cr_email_set}}
 
@@ -88,6 +91,7 @@ Other Deployment functions:
 \code{\link{cr_deploy_docker}()},
 \code{\link{cr_deploy_git_html}()},
 \code{\link{cr_deploy_github_docker}()},
+\code{\link{cr_deploy_packagetests}()},
 \code{\link{cr_deploy_pkgdown}()},
 \code{\link{cr_deploy_run}()}
 }

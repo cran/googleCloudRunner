@@ -7,6 +7,10 @@ test_that("Online auth", {
   builds <- cr_buildtrigger_list()
   expect_s3_class(builds, "data.frame")
 
+  # tests auth on cloud build
+  cr_deploy_r(system.file("schedule/test_auth.R", package = "googleCloudRunner"),
+              r_image = "gcr.io/gcer-public/googleauthr-verse")
+
 })
 
 test_that("[Online] Test deployments", {
@@ -19,7 +23,9 @@ test_that("[Online] Test deployments", {
   cd <- cr_deploy_docker(runme, launch_browser = FALSE)
   expect_equal(cd$status,"SUCCESS")
 
-  cr <- cr_deploy_plumber(runme, dockerfile = paste0(runme, "Dockerfile"))
+  # why fail?
+  cr <- cr_deploy_plumber(runme,
+                          dockerfile = paste0(runme, "Dockerfile"))
 
   expect_equal(cr$kind, "Service")
   expect_true(grepl("^gcr.io/.+/example:.+",
@@ -103,7 +109,7 @@ test_that("[Online] Test Build Triggers",{
   cloudbuild <- system.file("cloudbuild/cloudbuild.yaml",
                             package = "googleCloudRunner")
 
-  bb <- cr_build_make(cloudbuild, projectId = "test-project")
+  bb <- cr_build_make(cloudbuild)
 
   github <- GitHubEventsConfig("MarkEdmondson1234/googleCloudRunner",
                                branch = "master")
@@ -237,8 +243,7 @@ test_that("Building Build Objects", {
   bq <- cr_build_make(yaml = yaml,
                 source = my_gcs_source,
                 timeout = 10,
-                images = "gcr.io/my-project/demo",
-                projectId = "dummy-project")
+                images = "gcr.io/my-project/demo")
   expect_true(googleCloudRunner:::is.gar_Build(bq))
   expect_equal(bq$images, "gcr.io/my-project/demo")
   expect_equal(bq$timeout, "10s")
@@ -249,8 +254,7 @@ test_that("Building Build Objects", {
   bq2 <- cr_build_make(yaml = yaml,
                       source = my_repo_source,
                       timeout = "11s",
-                      images = "gcr.io/my-project/demo",
-                      projectId = "dummy-project")
+                      images = "gcr.io/my-project/demo")
   expect_true(googleCloudRunner:::is.gar_Build(bq2))
   expect_equal(bq2$images, "gcr.io/my-project/demo")
   expect_equal(bq2$timeout, "11s")
@@ -259,7 +263,7 @@ test_that("Building Build Objects", {
   expect_equal(bq2$source$repoSource$branchName, "master")
 
   # write from creating a Yaml object
-  image = "gcr.io/my-project/my-image"
+  image <- "gcr.io/my-project/my-image"
   run_yaml <- cr_build_yaml(steps = c(cr_buildstep_docker(image, dir = "deploy"),
                              cr_buildstep("gcloud",
                                           c("beta","run","deploy", "test1",
@@ -268,7 +272,7 @@ test_that("Building Build Objects", {
 
   expect_equal(run_yaml$images[[1]], image)
   expect_equal(run_yaml$steps[[1]]$dir, "deploy")
-  expect_equal(run_yaml$steps[[1]]$args[[3]],
+  expect_equal(run_yaml$steps[[1]]$args[[5]],
                "gcr.io/my-project/my-image:$BUILD_ID")
   expect_equal(run_yaml$steps[[2]]$name, "gcr.io/cloud-builders/docker")
   expect_equal(run_yaml$steps[[2]]$args[[2]],
@@ -277,7 +281,7 @@ test_that("Building Build Objects", {
 
   scheduler <- cr_build_schedule_http(cr_build_make(run_yaml))
 
-  expect_equal(scheduler$body, "eyJzdGVwcyI6W3sibmFtZSI6Imdjci5pby9jbG91ZC1idWlsZGVycy9kb2NrZXIiLCJhcmdzIjpbImJ1aWxkIiwiLXQiLCJnY3IuaW8vbXktcHJvamVjdC9teS1pbWFnZTokQlVJTERfSUQiLCIuIl0sImRpciI6ImRlcGxveSJ9LHsibmFtZSI6Imdjci5pby9jbG91ZC1idWlsZGVycy9kb2NrZXIiLCJhcmdzIjpbInB1c2giLCJnY3IuaW8vbXktcHJvamVjdC9teS1pbWFnZTokQlVJTERfSUQiXSwiZGlyIjoiZGVwbG95In0seyJuYW1lIjoiZ2NyLmlvL2Nsb3VkLWJ1aWxkZXJzL2djbG91ZCIsImFyZ3MiOlsiYmV0YSIsInJ1biIsImRlcGxveSIsInRlc3QxIiwiLS1pbWFnZSIsImdjci5pby9teS1wcm9qZWN0L215LWltYWdlIl0sImRpciI6ImRlcGxveSJ9XSwiaW1hZ2VzIjpbImdjci5pby9teS1wcm9qZWN0L215LWltYWdlIl19")
+  expect_equal(scheduler$body, "eyJzdGVwcyI6W3sibmFtZSI6Imdjci5pby9jbG91ZC1idWlsZGVycy9kb2NrZXIiLCJhcmdzIjpbImJ1aWxkIiwiLWYiLCJEb2NrZXJmaWxlIiwiLXQiLCJnY3IuaW8vbXktcHJvamVjdC9teS1pbWFnZTokQlVJTERfSUQiLCIuIl0sImRpciI6ImRlcGxveSJ9LHsibmFtZSI6Imdjci5pby9jbG91ZC1idWlsZGVycy9kb2NrZXIiLCJhcmdzIjpbInB1c2giLCJnY3IuaW8vbXktcHJvamVjdC9teS1pbWFnZTokQlVJTERfSUQiXSwiZGlyIjoiZGVwbG95In0seyJuYW1lIjoiZ2NyLmlvL2Nsb3VkLWJ1aWxkZXJzL2djbG91ZCIsImFyZ3MiOlsiYmV0YSIsInJ1biIsImRlcGxveSIsInRlc3QxIiwiLS1pbWFnZSIsImdjci5pby9teS1wcm9qZWN0L215LWltYWdlIl0sImRpciI6ImRlcGxveSJ9XSwiaW1hZ2VzIjpbImdjci5pby9teS1wcm9qZWN0L215LWltYWdlIl19")
 
   cr_build_write(run_yaml, file = "cloudbuild_test.yaml")
   expect_true(file.exists("cloudbuild_test.yaml"))
@@ -331,7 +335,7 @@ test_that("Render BuildStep objects", {
 
   bsd <- cr_buildstep_docker("my-image", tag = "$BRANCH_NAME")
   expect_equal(bsd[[1]]$name, "gcr.io/cloud-builders/docker")
-  expect_equal(bsd[[1]]$args[[3]], "gcr.io/test-project/my-image:$BRANCH_NAME")
+  expect_equal(bsd[[1]]$args[[5]], "gcr.io/test-project/my-image:$BRANCH_NAME")
   expect_equal(bsd[[2]]$name,  "gcr.io/cloud-builders/docker")
   expect_equal(bsd[[2]]$args[[1]], "push")
 
@@ -367,15 +371,15 @@ test_that("Render BuildStep objects", {
 
   git_yaml <- cr_build_yaml(
     steps = c(
-      cr_buildstep_gitsetup("my_keyring", "git_key"),
+      cr_buildstep_gitsetup("github-ssh"),
       cr_buildstep_git(c("clone", "git@github.com:github_name/repo_name"))
     )
   )
 
   expect_equal(git_yaml$steps[[1]]$name, "gcr.io/cloud-builders/gcloud")
-  expect_equal(git_yaml$steps[[1]]$args[[1]], "kms")
-  expect_equal(git_yaml$steps[[1]]$args[[4]], "id_rsa.enc")
-  expect_equal(git_yaml$steps[[1]]$args[[10]], "my_keyring")
+  expect_equal(git_yaml$steps[[1]]$args[[1]], "-c")
+  expect_equal(git_yaml$steps[[1]]$args[[2]],
+               "gcloud secrets versions access latest --secret=github-ssh > /root/.ssh/id_rsa")
   expect_equal(git_yaml$steps[[1]]$volumes[[1]]$name, "ssh")
   expect_equal(git_yaml$steps[[1]]$volumes[[1]]$path, "/root/.ssh")
 
@@ -384,17 +388,31 @@ test_that("Render BuildStep objects", {
   expect_equal(git_yaml$steps[[2]]$volumes[[1]]$path, "/root/.ssh")
 
   pkgdown_steps <- cr_buildstep_pkgdown("$_GITHUB_REPO",
-                                        "cloudbuild@google.com")
+                                        "cloudbuild@google.com",
+                                        "my_secret")
 
-  expect_equal(pkgdown_steps[[1]]$name, "gcr.io/cloud-builders/gcloud")
-  expect_equal(pkgdown_steps[[1]]$args[[1]], "kms")
-  expect_equal(pkgdown_steps[[1]]$args[[4]], "id_rsa.enc")
-  expect_equal(pkgdown_steps[[1]]$args[[10]], "my-keyring")
-  expect_equal(pkgdown_steps[[1]]$volumes[[1]]$name, "ssh")
-  expect_equal(pkgdown_steps[[1]]$volumes[[1]]$path, "/root/.ssh")
+  expect_equal(pkgdown_steps[[1]]$name,
+               "gcr.io/cloud-builders/gcloud")
+  expect_equal(pkgdown_steps[[1]]$args[[2]],
+               "gcloud secrets versions access latest --secret=my_secret > /root/.ssh/id_rsa")
+  expect_equal(pkgdown_steps[[2]]$id, "git setup script")
+  expect_equal(pkgdown_steps[[3]]$args[[1]], "clone")
+  expect_equal(pkgdown_steps[[3]]$volumes[[1]]$name, "ssh")
+  expect_equal(pkgdown_steps[[3]]$volumes[[1]]$path, "/root/.ssh")
 
   expect_equal(pkgdown_steps[[4]]$args[[3]],
-               "devtools::install()\nlist.files()\npkgdown::build_site()\n")
+               "devtools::install()\npkgdown::build_site()")
+
+  expect_equal(pkgdown_steps[[5]]$args[[1]],
+               "add")
+  expect_equal(pkgdown_steps[[6]]$args[[1]],
+               "commit")
+  expect_equal(pkgdown_steps[[6]]$args[[4]],
+               "[skip travis] Build website from commit ${COMMIT_SHA}: \n$(date +\"%Y%m%dT%H:%M:%S\")")
+  expect_equal(pkgdown_steps[[7]]$args[[1]],
+               "status")
+  expect_equal(pkgdown_steps[[8]]$args[[1]],
+               "push")
 
   gh <- GitHubEventsConfig("mark/repo")
   expect_equal(gh$owner, "mark")
@@ -424,16 +442,30 @@ test_that("Render BuildStep objects", {
 
 
   # pkgdown builds
-  pd <- cr_deploy_pkgdown()
-  expect_true(file.exists("cloudbuild.yml"))
+  pd <- cr_deploy_pkgdown(secret = "my_github")
+  expect_true(file.exists("cloudbuild-pkgdown.yml"))
   expect_equal(pd$steps[[1]]$name, "gcr.io/cloud-builders/gcloud")
-  unlink("cloudbuild.yml")
+  expect_equal(pd$steps[[1]]$args[[2]],
+    "gcloud secrets versions access latest --secret=my_github > /root/.ssh/id_rsa")
+  unlink("cloudbuild-pkgdown.yml")
+
+  # package test builds
+  pt <- cr_deploy_packagetests()
+  expect_true(file.exists("cloudbuild-tests.yml"))
+  expect_equal(pt$steps[[1]]$env[[1]], "NOT_CRAN=true")
+  unlink("cloudbuild-tests.yml")
 
   # slack messages
   bs <- cr_buildstep_slack("hello")
   expect_equal(bs[[1]]$name, "technosophos/slack-notify")
   expect_equal(bs[[1]]$env[[1]], "SLACK_WEBHOOK=$_SLACK_WEBHOOK")
   expect_equal(bs[[1]]$env[[2]], "SLACK_MESSAGE='hello'")
+
+  # secrets
+  ss <- cr_buildstep_secret("my_secret","secret.json")
+  expect_equal(ss[[1]]$name, "gcr.io/cloud-builders/gcloud")
+  expect_equal(ss[[1]]$entrypoint, "bash")
+  expect_equal(ss[[1]]$args[[2]], "gcloud secrets versions access latest --secret=my_secret > secret.json")
 
 })
 

@@ -9,6 +9,7 @@ cr_buildstep_docker(
   tag = "$BUILD_ID",
   location = ".",
   projectId = cr_project_get(),
+  dockerfile = "Dockerfile",
   ...
 )
 }
@@ -20,6 +21,8 @@ cr_buildstep_docker(
 \item{location}{Where the Dockerfile to build is in relation to \code{dir}}
 
 \item{projectId}{The projectId}
+
+\item{dockerfile}{Specify the name of the Dockerfile found at \code{location}}
 
 \item{...}{Further arguments passed in to \link{cr_buildstep}}
 }
@@ -59,6 +62,7 @@ Other Cloud Buildsteps:
 \code{\link{cr_buildstep_pkgdown}()},
 \code{\link{cr_buildstep_run}()},
 \code{\link{cr_buildstep_r}()},
+\code{\link{cr_buildstep_secret}()},
 \code{\link{cr_buildstep_slack}()},
 \code{\link{cr_buildstep}()}
 }
