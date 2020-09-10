@@ -58,7 +58,7 @@ cr_buildstep_r(c("library(dplyr)",
 
 # use your own R image with custom R
 my_r <- c("devtools::install()", "pkgdown::build_site()")
-br <-  cr_buildstep_r(my_r, name= "gcr.io/gcer-public/packagetools:master")
+br <-  cr_buildstep_r(my_r, name= "gcr.io/gcer-public/packagetools:latest")
 
 
 
@@ -71,6 +71,7 @@ Other Cloud Buildsteps:
 \code{\link{cr_buildstep_docker}()},
 \code{\link{cr_buildstep_edit}()},
 \code{\link{cr_buildstep_extract}()},
+\code{\link{cr_buildstep_gcloud}()},
 \code{\link{cr_buildstep_gitsetup}()},
 \code{\link{cr_buildstep_mailgun}()},
 \code{\link{cr_buildstep_nginx_setup}()},

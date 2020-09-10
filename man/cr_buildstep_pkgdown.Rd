@@ -9,7 +9,7 @@ cr_buildstep_pkgdown(
   git_email,
   secret,
   env = NULL,
-  build_image = "gcr.io/gcer-public/packagetools:master",
+  build_image = "gcr.io/gcer-public/packagetools:latest",
   post_setup = NULL,
   post_clone = NULL
 )
@@ -70,6 +70,7 @@ Other Cloud Buildsteps:
 \code{\link{cr_buildstep_docker}()},
 \code{\link{cr_buildstep_edit}()},
 \code{\link{cr_buildstep_extract}()},
+\code{\link{cr_buildstep_gcloud}()},
 \code{\link{cr_buildstep_gitsetup}()},
 \code{\link{cr_buildstep_mailgun}()},
 \code{\link{cr_buildstep_nginx_setup}()},

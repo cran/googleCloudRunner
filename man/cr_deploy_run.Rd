@@ -16,7 +16,8 @@ cr_deploy_run(
   bucket = cr_bucket_get(),
   projectId = cr_project_get(),
   launch_browser = interactive(),
-  timeout = 600L
+  timeout = 600L,
+  ...
 )
 
 cr_deploy_html(
@@ -53,7 +54,7 @@ cr_deploy_plumber(
 
 \item{image_name}{The gcr.io image name that will be deployed and/or built}
 
-\item{tag}{The tag to attached to the pushed image - can use \code{Build} macros}
+\item{tag}{The tag or tags to be attached to the pushed image - can use \code{Build} macros}
 
 \item{region}{The Cloud Run endpoint set by CR_REGION env arg}
 
@@ -64,6 +65,20 @@ cr_deploy_plumber(
 \item{launch_browser}{Whether to launch the logs URL in a browser once deployed}
 
 \item{timeout}{Amount of time that this build should be allowed to run, to second}
+
+\item{...}{
+  Arguments passed on to \code{\link[=cr_buildstep_run]{cr_buildstep_run}}
+  \describe{
+    \item{\code{name}}{Name for deployment on Cloud Run}
+    \item{\code{image}}{The name of the image to create or use in deployment - \code{gcr.io}}
+    \item{\code{allowUnauthenticated}}{TRUE if can be reached from public HTTP address.}
+    \item{\code{concurrency}}{How many connections each container instance can serve. Can be up to 80.}
+    \item{\code{port}}{Container port to receive requests at. Also sets the $PORT environment variable. Must be a number between 1 and 65535, inclusive. To unset this field, pass the special value "default".}
+    \item{\code{max_instances}}{the desired maximum nuimber of container instances. "default" is 1000, you can get more if you requested a quota instance.  For Shiny instances on Cloud Run, this needs to be 1.}
+    \item{\code{memory}}{The format for size is a fixed or floating point number followed by a unit: G, M, or K corresponding to gigabyte, megabyte, or kilobyte, respectively, or use the power-of-two equivalents: Gi, Mi, Ki corresponding to gibibyte, mebibyte or kibibyte respectively. The default is 256Mi}
+    \item{\code{cpu}}{1 or 2 CPUs for your instance}
+    \item{\code{env_vars}}{Environment arguments passed to the Cloud Run container at runtime.  Distinct from \code{env} that run at build time.}
+  }}
 
 \item{html_folder}{the folder containing all the html}
 
@@ -126,12 +141,14 @@ cr_deploy_plumber(system.file("example/", package = "googleCloudRunner"))
 }
 }
 \seealso{
+\link{cr_deploy_run_website} which has more features like rending Rmd files and deploying upon each git commit
+
 Other Deployment functions: 
+\code{\link{cr_deploy_docker_trigger}()},
 \code{\link{cr_deploy_docker}()},
-\code{\link{cr_deploy_git_html}()},
-\code{\link{cr_deploy_github_docker}()},
 \code{\link{cr_deploy_packagetests}()},
 \code{\link{cr_deploy_pkgdown}()},
+\code{\link{cr_deploy_run_website}()},
 \code{\link{cr_deploy_r}()}
 }
 \concept{Deployment functions}

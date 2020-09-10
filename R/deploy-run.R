@@ -9,6 +9,8 @@
 #' @param projectId The projectId where it all gets deployed to
 #' @param region The Cloud Run endpoint set by CR_REGION env arg
 #' @param bucket The Cloud Storage bucket that will hold the code
+#' @param ... Other arguments passed to \link{cr_buildstep_run}
+#' @inheritDotParams cr_buildstep_run
 #' @inheritParams cr_buildstep_docker
 #' @inheritParams cr_build
 #' @family Deployment functions
@@ -35,15 +37,16 @@ cr_deploy_run <- function(local,
                           bucket = cr_bucket_get(),
                           projectId = cr_project_get(),
                           launch_browser = interactive(),
-                          timeout=600L){
+                          timeout=600L,
+                          ...){
 
   assert_that(
     is.dir(local),
     is.string(remote),
-    is.string(tag)
+    is.character(tag)
   )
 
-  myMessage("Uploading ", local, " folder for Cloud Run", level = 3)
+  myMessage("Uploading", local, "folder for Cloud Run", level = 3)
 
   image_name <- make_image_name(image_name, projectId)
 
@@ -55,18 +58,24 @@ cr_deploy_run <- function(local,
                             bucket = bucket,
                             projectId = projectId,
                             launch_browser = launch_browser,
-                            timeout=timeout)
+                            timeout=timeout,
+                            kaniko_cache=TRUE)
+
   if(built$status != "SUCCESS"){
     myMessage("Error building Dockerfile", level = 3)
     return(built)
   }
 
-  cr_run(built$results$images$name,
+  built_image <- built$results$images$name
+  myMessage("Built Docker image: ", built_image, level = 3)
+
+  cr_run(built_image,
          name = lower_alpha_dash(remote),
          region = region,
          projectId = projectId,
          launch_browser=launch_browser,
-         timeout=timeout)
+         timeout=timeout,
+         ...)
 
 }
 
@@ -80,6 +89,8 @@ cr_deploy_run <- function(local,
 #' Supply the html folder to host it on Cloud Run.  Builds the dockerfile with the html within it, then deploys to Cloud Run
 #'
 #' Will add a \code{default.template} file to the html folder that holds the nginx configuration
+#'
+#' @seealso \link{cr_deploy_run_website} which has more features like rending Rmd files and deploying upon each git commit
 #'
 #' @export
 #' @import assertthat

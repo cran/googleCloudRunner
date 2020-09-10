@@ -1,3 +1,25 @@
+#' @method print cr_buildtrigger_repo
+#' @export
+print.cr_buildtrigger_repo <- function(x, ...){
+  cat("==BuildTriggerRepo==\n")
+  if(x$type == "github"){
+    cat0("GitHub Repo:   ", paste0(x$repo$owner,"/",x$repo$name))
+    if(!is.null(x$repo$push)) cat("--Push trigger\n") else cat("--Pull trigger\n")
+    cat0("Branch: ", x$repo$push$branch)
+    cat0("Tag:    ", x$repo$push$tag)
+    cat0("Branch: ", x$repo$pull$branch)
+    cat0("CommentControl: ", x$repo$pull$commentControl)
+  } else {
+    cat0("Source Repository: ", x$repo$repoName)
+    cat0("Project:           ", x$repo$projectId)
+    cat0("Tag:               ", x$repo$tagName)
+    cat0("commitSha:         ", x$repo$commitSha)
+    cat0("Brnach:            ", x$repo$branchName)
+    cat0("Directory:         ", x$repo$dir)
+  }
+
+}
+
 #' @method print BuildTriggerResponse
 #' @export
 print.BuildTriggerResponse <- function(x, ...){

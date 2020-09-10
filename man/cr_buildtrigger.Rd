@@ -5,28 +5,26 @@
 \title{Creates a new `BuildTrigger`.This API is experimental.}
 \usage{
 cr_buildtrigger(
+  build,
   name,
   trigger,
-  build,
   description = paste("cr_buildtrigger: ", Sys.time()),
-  tags = NULL,
   disabled = FALSE,
   substitutions = NULL,
   ignoredFiles = NULL,
   includedFiles = NULL,
+  trigger_tags = NULL,
   projectId = cr_project_get()
 )
 }
 \arguments{
+\item{build}{The build to trigger created via \link{cr_build_make}, or the file location of the cloudbuild.yaml within the trigger source}
+
 \item{name}{User assigned name of the trigger}
 
-\item{trigger}{The trigger source which will be a \link{RepoSource} or a \link{GitHubEventsConfig}}
-
-\item{build}{A file location within the trigger source to use for the build steps, or a \link{Build} object}
+\item{trigger}{The trigger source created via \link{cr_buildtrigger_repo}}
 
 \item{description}{Human-readable description of this trigger}
-
-\item{tags}{Tags for annotation of a `BuildTrigger`}
 
 \item{disabled}{If true, the trigger will never result in a build}
 
@@ -36,10 +34,15 @@ cr_buildtrigger(
 
 \item{includedFiles}{If any of the files altered in the commit pass the ignored_files}
 
+\item{trigger_tags}{Tags for the buildtrigger listing}
+
 \item{projectId}{ID of the project for which to configure automatic builds}
 }
 \description{
 Creates a new `BuildTrigger`.This API is experimental.
+}
+\details{
+Any source specified in the build will be overwritten to use the trigger as a source (GitHub or Cloud Source Repositories)
 }
 \examples{
 cr_project_set("my-project")
@@ -47,33 +50,28 @@ cr_bucket_set("my-bucket")
 cloudbuild <- system.file("cloudbuild/cloudbuild.yaml",
                            package = "googleCloudRunner")
 bb <- cr_build_make(cloudbuild)
-github <- GitHubEventsConfig("MarkEdmondson1234/googleCloudRunner",
-                             branch = "master")
-# creates a trigger with named subtitutions
-ss <- list(`_MYVAR` = "TEST1",
-           `_GITHUB` = "MarkEdmondson1234/googleCloudRunner")
+
+# repo hosted on GitHub
+gh_trigger <- cr_buildtrigger_repo("MarkEdmondson1234/googleCloudRunner")
+
+# repo mirrored to Cloud Source Repositories
+cs_trigger <- cr_buildtrigger_repo("github_markedmondson1234_googlecloudrunner",
+                                   type = "cloud_source")
 
 \dontrun{
+# build with in-line build code
+cr_buildtrigger(bb, name = "bt-github-inline", trigger = gh_trigger)
 
-cr_buildtrigger("trig1", trigger = github, build = bb)
+# build with in-line build code using Cloud Source Repository
+cr_buildtrigger(bb, name = "bt-github-inline", trigger = cs_trigger)
 
-cr_buildtrigger("trig2", trigger = github,
-                build = bb,
-                substitutions = ss)
+# build pointing to cloudbuild.yaml within the GitHub repo
+cr_buildtrigger("inst/cloudbuild/cloudbuild.yaml",
+                 name = "bt-github-file", trigger = gh_trigger)
 
-# create a trigger that will build from the file in the repo
-# this is similar to what cr_deploy_docker_github() does
-cr_buildtrigger("trig3", trigger = github,
-                build = "inst/cloudbuild/cloudbuild.yaml")
-
-build_docker <- cr_build_make(
-                    cr_build_yaml(
-                      steps = cr_buildstep_docker("build-dockerfile"),
-                      images = "gcr.io/my-project/my-image"
-                    ))
-
-cr_buildtrigger("trig4", trigger = github,
-                 build = build_docker)
+# build with repo mirror from file
+cr_buildtrigger("inst/cloudbuild/cloudbuild.yaml",
+                 name = "bt-cs-file", trigger = cs_trigger)
 }
 }
 \seealso{
@@ -84,7 +82,7 @@ Other BuildTrigger functions:
 \code{\link{cr_buildtrigger_edit}()},
 \code{\link{cr_buildtrigger_get}()},
 \code{\link{cr_buildtrigger_list}()},
-\code{\link{cr_buildtrigger_make}()},
+\code{\link{cr_buildtrigger_repo}()},
 \code{\link{cr_buildtrigger_run}()}
 }
 \concept{BuildTrigger functions}

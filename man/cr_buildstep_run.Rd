@@ -11,6 +11,10 @@ cr_buildstep_run(
   region = cr_region_get(),
   concurrency = 80,
   port = NULL,
+  max_instances = "default",
+  memory = "256Mi",
+  cpu = 1,
+  env_vars = NULL,
   ...
 )
 }
@@ -23,9 +27,17 @@ cr_buildstep_run(
 
 \item{region}{The endpoint region for deployment}
 
-\item{concurrency}{How many connections each image can serve. Can be up to 80.}
+\item{concurrency}{How many connections each container instance can serve. Can be up to 80.}
 
 \item{port}{Container port to receive requests at. Also sets the $PORT environment variable. Must be a number between 1 and 65535, inclusive. To unset this field, pass the special value "default".}
+
+\item{max_instances}{the desired maximum nuimber of container instances. "default" is 1000, you can get more if you requested a quota instance.  For Shiny instances on Cloud Run, this needs to be 1.}
+
+\item{memory}{The format for size is a fixed or floating point number followed by a unit: G, M, or K corresponding to gigabyte, megabyte, or kilobyte, respectively, or use the power-of-two equivalents: Gi, Mi, Ki corresponding to gibibyte, mebibyte or kibibyte respectively. The default is 256Mi}
+
+\item{cpu}{1 or 2 CPUs for your instance}
+
+\item{env_vars}{Environment arguments passed to the Cloud Run container at runtime.  Distinct from \code{env} that run at build time.}
 
 \item{...}{passed on to \link{cr_buildstep}}
 }
@@ -40,6 +52,7 @@ Other Cloud Buildsteps:
 \code{\link{cr_buildstep_docker}()},
 \code{\link{cr_buildstep_edit}()},
 \code{\link{cr_buildstep_extract}()},
+\code{\link{cr_buildstep_gcloud}()},
 \code{\link{cr_buildstep_gitsetup}()},
 \code{\link{cr_buildstep_mailgun}()},
 \code{\link{cr_buildstep_nginx_setup}()},

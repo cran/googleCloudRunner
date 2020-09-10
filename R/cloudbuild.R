@@ -225,12 +225,17 @@ cr_build_status <- function(id = .Last.value,
 
   url <- sprintf("https://cloudbuild.googleapis.com/v1/projects/%s/builds/%s",
                  projectId, the_id)
+
+
   # cloudbuild.projects.builds.get
   f <- gar_api_generator(url, "GET",
-                         data_parse_function = function(x) as.gar_Build(x))
+                         data_parse_function = as.gar_Build)
+
   f()
 
 }
+
+
 
 #' Download artifacts from a build
 #'
@@ -249,7 +254,7 @@ cr_build_status <- function(id = .Last.value,
 #' @import assertthat
 #' @importFrom googleCloudStorageR gcs_list_objects gcs_get_object
 #'
-#' @seealso \href{https://cloud.google.com/cloud-build/docs/configuring-builds/store-images-artifacts}{Storing images and artifacts}
+#' @seealso \href{https://cloud.google.com/cloud-build/docs/building/store-build-artifacts}{Storing images and artifacts}
 #'
 #' @examples
 #'
@@ -336,19 +341,31 @@ wait_f <- function(init, projectId){
   op <- init
   wait <- TRUE
 
-  cat("\nWaiting for build to finish:\n |=")
+  myMessage("Waiting for Cloud Build...", level = 3)
 
+  timeout <- extract_timeout(op)
+
+  pbf <- sprintf("(:spin) Build time: [:elapsedfull] (:percent of timeout: %ss)",
+                 timeout)
+  pb <- progress::progress_bar$new(
+    total = extract_timeout(op),
+    format = pbf,
+    clear = FALSE
+  )
+
+  pb$tick(0)
   while(wait){
     status <- cr_build_status(op, projectId = projectId)
-    cat("=")
+    pb$tick()
     if(!status$status %in% c("STATUS_UNKNOWN", "QUEUED", "WORKING")){
        wait <- FALSE
     }
     op <- status
     Sys.sleep(5)
   }
-  cat("| Build finished\n")
-  myMessage("Build finished with status: ", status$status, level = 3)
+  pb$terminate()
+
+  myMessage("Build finished with status:", status$status, level = 3)
 
   status
 }
@@ -394,10 +411,27 @@ extract_build_id <- function(op){
   the_id
 }
 
+parse_build_meta_to_obj <- function(o){
+  yml <- cr_build_yaml(
+    steps = unname(cr_buildstep_df(o$steps)),
+    timeout = o$timeout,
+    logsBucket = o$logsBucket,
+    options = o$options,
+    substitutions = o$substitutions,
+    tags = o$tags,
+    secrets = o$secrets,
+    images = o$images,
+    artifacts = o$artifacts
+  )
+
+  cr_build_make(yml)
+}
+
 as.gar_Build <- function(x){
   if(is.BuildOperationMetadata(x)){
-    o <- cr_build_status(extract_build_id(x),
+    bb <- cr_build_status(extract_build_id(x),
                          projectId = x$metadata$build$projectId)
+    o <- parse_build_meta_to_obj(bb)
   } else if (is.gar_Build(x)) {
     o <- x # maybe more here later...
   } else {

@@ -37,7 +37,13 @@ cr_deploy_r(
 
 \item{timeout}{Amount of time that this build should be allowed to run, to second}
 
-\item{...}{Other arguments passed through to \link{cr_buildstep_r}}
+\item{...}{
+  Arguments passed on to \code{\link[=cr_buildstep_r]{cr_buildstep_r}}
+  \describe{
+    \item{\code{name}}{The docker image that will run the R code, usually from rocker-project.org}
+    \item{\code{r_source}}{Whether the R code will be from a runtime file within the source or at build time copying over from a local R file in your session}
+    \item{\code{prefix}}{prefixed to name - set to "" to suppress.  Will be suppressed if \code{name} starts with gcr.io}
+  }}
 
 \item{email}{The email that will authenticate the job set via \link{cr_email_set}}
 
@@ -88,11 +94,11 @@ cr_deploy_r(r_lines, schedule = "15 21 * * *", source = source)
 If you want to run R code upon certain events like GitHub pushes, look at \link{cr_buildtrigger}
 
 Other Deployment functions: 
+\code{\link{cr_deploy_docker_trigger}()},
 \code{\link{cr_deploy_docker}()},
-\code{\link{cr_deploy_git_html}()},
-\code{\link{cr_deploy_github_docker}()},
 \code{\link{cr_deploy_packagetests}()},
 \code{\link{cr_deploy_pkgdown}()},
+\code{\link{cr_deploy_run_website}()},
 \code{\link{cr_deploy_run}()}
 }
 \concept{Deployment functions}

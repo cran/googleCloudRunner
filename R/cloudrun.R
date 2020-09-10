@@ -7,11 +7,17 @@
 #'
 #' @param image The name of the image to create or use in deployment - \code{gcr.io}
 #' @param name Name for deployment on Cloud Run
-#' @param concurrency How many connections each image can serve. Can be up to 80.
+#' @param concurrency How many connections each container instance can serve. Can be up to 80.
 #' @param port Container port to receive requests at. Also sets the $PORT environment variable. Must be a number between 1 and 65535, inclusive. To unset this field, pass the special value "default".
 #' @param region The endpoint region for deployment
 #' @param projectId The GCP project from which the services should be listed
 #' @param allowUnauthenticated TRUE if can be reached from public HTTP address.
+#' @param max_instances the desired maximum nuimber of container instances. "default" is 1000, you can get more if you requested a quota instance.  For Shiny instances on Cloud Run, this needs to be 1.
+#' @param memory The format for size is a fixed or floating point number followed by a unit: G, M, or K corresponding to gigabyte, megabyte, or kilobyte, respectively, or use the power-of-two equivalents: Gi, Mi, Ki corresponding to gibibyte, mebibyte or kibibyte respectively. The default is 256Mi
+#' @param cpu 1 or 2 CPUs for your instance
+#' @param env_vars Environment arguments passed to the Cloud Run container at runtime.  Distinct from \code{env} that run at build time.
+#' @param ... Other arguments passed to \link{cr_buildstep_run}
+#' @inheritDotParams cr_buildstep_run
 #'
 #' @inheritParams cr_build
 #' @importFrom googleAuthR gar_api_generator
@@ -30,16 +36,23 @@
 #' cr_project_set("my-project")
 #' cr_region_set("europe-west1")
 #' cr_run("gcr.io/my-project/my-image")
+#' cr_run("gcr.io/cloud-tagging-10302018/gtm-cloud-image:stable",
+#'        env_vars = c("CONTAINER_CONFIG=xxxxxxx"))
 #' }
 cr_run <- function(image,
                    name = basename(image),
                    allowUnauthenticated = TRUE,
                    concurrency = 1,
                    port = NULL,
+                   max_instances = "default",
+                   memory = "256Mi",
+                   cpu = 1,
                    timeout=600L,
                    region = cr_region_get(),
                    projectId = cr_project_get(),
-                   launch_browser=interactive()) {
+                   launch_browser=interactive(),
+                   env_vars = NULL,
+                   ...) {
 
   myMessage(paste("#> Launching CloudRun image: ",image),
             level = 3)
@@ -51,7 +64,12 @@ cr_run <- function(image,
                              allowUnauthenticated = allowUnauthenticated,
                              region = region,
                              concurrency = concurrency,
-                             port = port)
+                             port = port,
+                             max_instances = max_instances,
+                             memory = memory,
+                             cpu = cpu,
+                             env_vars = env_vars,
+                             ...)
   )
 
   build <- cr_build(run_yaml,
@@ -108,7 +126,7 @@ make_endpoint <- function(endbit){
 #'
 #' List the Cloud Run services you have access to
 #'
-#' @seealso \href{https://cloud.run}{Google Documentation for Cloud Run}
+#' @seealso \href{https://cloud.google.com/run/}{Google Documentation for Cloud Run}
 #'
 #' @param projectId The GCP project from which the services should be listed
 #' @param labelSelector Allows to filter resources based on a label

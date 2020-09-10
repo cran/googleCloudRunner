@@ -102,7 +102,7 @@ cr_buildstep("test", "ls", volumes = list(list(name = "ssh", path = "/root/.ssh"
 
 }
 \seealso{
-\href{https://cloud.google.com/cloud-build/docs/create-custom-build-steps}{Creating custom build steps how-to guide}
+\href{https://cloud.google.com/cloud-build/docs/configuring-builds/use-community-and-custom-builders}{Creating custom build steps how-to guide}
 
 Other Cloud Buildsteps: 
 \code{\link{cr_buildstep_bash}()},
@@ -111,6 +111,7 @@ Other Cloud Buildsteps:
 \code{\link{cr_buildstep_docker}()},
 \code{\link{cr_buildstep_edit}()},
 \code{\link{cr_buildstep_extract}()},
+\code{\link{cr_buildstep_gcloud}()},
 \code{\link{cr_buildstep_gitsetup}()},
 \code{\link{cr_buildstep_mailgun}()},
 \code{\link{cr_buildstep_nginx_setup}()},

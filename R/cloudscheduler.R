@@ -10,6 +10,7 @@
 #' @importFrom googleAuthR gar_api_generator
 #' @family Cloud Scheduler functions
 #' @export
+#' @return A \code{gar_scheduleJob} class object
 #' @examples
 #'
 #' \dontrun{
@@ -60,30 +61,34 @@ cr_schedule <- function(name,
              description = description,
              timeZone = timeZone)
 
+  if(!overwrite){
+    assert_that(is.string(schedule))
+  }
+
+  the_url <-
+    sprintf("%s/projects/%s/locations/%s/jobs",
+            stem, projectId, region)
+  # cloudscheduler.projects.locations.jobs.create
+  f <- gar_api_generator(the_url, "POST",
+                         data_parse_function = parse_schedule)
+
   if(overwrite){
     scheds <- cr_schedule_list(region = region, projectId = projectId)
     if(the_name %in% scheds$name){
       myMessage("Overwriting schedule job: ", name, level=3)
-# https://cloud.google.com/scheduler/docs/reference/rest/v1/projects.locations.jobs/patch
+      # https://cloud.google.com/scheduler/docs/reference/rest/v1/projects.locations.jobs/patch
       the_url <- paste0(stem,"/", the_name)
       updateMask <- rmNullObs(list(schedule = schedule,
-                             httpTarget = httpTarget,
-                             description = description))
+                                   httpTarget = httpTarget,
+                                   description = description))
 
       f <- gar_api_generator(the_url, "PATCH",
-              data_parse_function = parse_schedule,
-              pars_args = list(updateMask = paste(names(updateMask),
-                                                  collapse = ",")))
+                             data_parse_function = parse_schedule,
+                             pars_args = list(updateMask = paste(names(updateMask),
+                                                                 collapse = ",")))
     }
-  } else {
-    assert_that(is.string(schedule))
-    the_url <-
-      sprintf("%s/projects/%s/locations/%s/jobs",
-              stem, projectId, region)
-    # cloudscheduler.projects.locations.jobs.create
-    f <- gar_api_generator(the_url, "POST",
-                           data_parse_function = parse_schedule)
-
+    # if not in the_name not in scheds, keep existing f()
+    myMessage("No existing schedule to overwrite", level = 3)
   }
 
   stopifnot(inherits(job, "gar_scheduleJob"))
@@ -166,11 +171,14 @@ parse_schedule_list <- function(x){
     return(data.frame())
   }
 
-  x$jobs[, c("name","userUpdateTime",
-             "state", "scheduleTime",
-             "lastAttemptTime",
-             "schedule","timeZone",
-             "attemptDeadline")]
+  df <- x$jobs
+  cols <- intersect(names(df), c("name","userUpdateTime",
+                             "state", "scheduleTime",
+                             "lastAttemptTime",
+                             "schedule","timeZone",
+                             "attemptDeadline"))
+
+  df[, cols]
 }
 
 #' Deletes a scheduled job.
@@ -396,12 +404,18 @@ HttpTarget <- function(headers = NULL, body = NULL, oauthToken = NULL,
     )
   }
 
+  the_body <- toJSON(body, auto_unbox = TRUE)
+  myMessage("Body parsed: ", the_body, level = 3)
+
   if(!is.null(body)){
-    body <- base64_encode(toJSON(body, auto_unbox = TRUE),linebreaks = FALSE)
+    body <- base64_encode(the_body,linebreaks = FALSE)
   }
 
-  structure(rmNullObs(list(headers = headers, body = body, oauthToken = oauthToken,
-                 uri = uri, oidcToken = oidcToken, httpMethod = httpMethod)),
+  obj <- rmNullObs(list(headers = headers, body = body, oauthToken = oauthToken,
+                        uri = uri, oidcToken = oidcToken, httpMethod = httpMethod))
+
+  myMessage("HttpTarget Object: ", obj, level = 2)
+  structure(obj,
             class = c("gar_HttpTarget", "list"))
 }
 

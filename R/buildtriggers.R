@@ -127,11 +127,17 @@ parse_buildtrigger_list <- function(x){
 #' Creates a new `BuildTrigger`.This API is experimental.
 #'
 #' @inheritParams BuildTrigger
-#' @param trigger The trigger source which will be a \link{RepoSource} or a \link{GitHubEventsConfig}
-#' @param build A file location within the trigger source to use for the build steps, or a \link{Build} object
+#' @param trigger The trigger source created via \link{cr_buildtrigger_repo}
+#' @param build The build to trigger created via \link{cr_build_make}, or the file location of the cloudbuild.yaml within the trigger source
 #' @param projectId ID of the project for which to configure automatic builds
+#' @param trigger_tags Tags for the buildtrigger listing
 #' @importFrom googleAuthR gar_api_generator
 #' @family BuildTrigger functions
+#'
+#' @details
+#'
+#' Any source specified in the build will be overwritten to use the trigger as a source (GitHub or Cloud Source Repositories)
+#'
 #' @export
 #' @examples
 #' cr_project_set("my-project")
@@ -139,65 +145,90 @@ parse_buildtrigger_list <- function(x){
 #' cloudbuild <- system.file("cloudbuild/cloudbuild.yaml",
 #'                            package = "googleCloudRunner")
 #' bb <- cr_build_make(cloudbuild)
-#' github <- GitHubEventsConfig("MarkEdmondson1234/googleCloudRunner",
-#'                              branch = "master")
-#' # creates a trigger with named subtitutions
-#' ss <- list(`_MYVAR` = "TEST1",
-#'            `_GITHUB` = "MarkEdmondson1234/googleCloudRunner")
+#'
+#' # repo hosted on GitHub
+#' gh_trigger <- cr_buildtrigger_repo("MarkEdmondson1234/googleCloudRunner")
+#'
+#' # repo mirrored to Cloud Source Repositories
+#' cs_trigger <- cr_buildtrigger_repo("github_markedmondson1234_googlecloudrunner",
+#'                                    type = "cloud_source")
 #'
 #' \dontrun{
+#' # build with in-line build code
+#' cr_buildtrigger(bb, name = "bt-github-inline", trigger = gh_trigger)
 #'
-#' cr_buildtrigger("trig1", trigger = github, build = bb)
+#' # build with in-line build code using Cloud Source Repository
+#' cr_buildtrigger(bb, name = "bt-github-inline", trigger = cs_trigger)
 #'
-#' cr_buildtrigger("trig2", trigger = github,
-#'                 build = bb,
-#'                 substitutions = ss)
+#' # build pointing to cloudbuild.yaml within the GitHub repo
+#' cr_buildtrigger("inst/cloudbuild/cloudbuild.yaml",
+#'                  name = "bt-github-file", trigger = gh_trigger)
 #'
-#' # create a trigger that will build from the file in the repo
-#' # this is similar to what cr_deploy_docker_github() does
-#' cr_buildtrigger("trig3", trigger = github,
-#'                 build = "inst/cloudbuild/cloudbuild.yaml")
-#'
-#' build_docker <- cr_build_make(
-#'                     cr_build_yaml(
-#'                       steps = cr_buildstep_docker("build-dockerfile"),
-#'                       images = "gcr.io/my-project/my-image"
-#'                     ))
-#'
-#' cr_buildtrigger("trig4", trigger = github,
-#'                  build = build_docker)
+#' # build with repo mirror from file
+#' cr_buildtrigger("inst/cloudbuild/cloudbuild.yaml",
+#'                  name = "bt-cs-file", trigger = cs_trigger)
 #' }
-cr_buildtrigger <- function(name,
+cr_buildtrigger <- function(build,
+                            name,
                             trigger,
-                            build,
                             description = paste("cr_buildtrigger: ", Sys.time()),
-                            tags = NULL,
                             disabled = FALSE,
                             substitutions = NULL,
                             ignoredFiles = NULL,
                             includedFiles = NULL,
+                            trigger_tags = NULL,
                             projectId = cr_project_get()) {
 
-    buildTrigger <- buildtrigger_make(
-        name = name,
-        trigger = trigger,
-        build = build,
-        description = description,
-        tags = tags,
-        disabled = disabled,
-        substitutions = substitutions,
-        ignoredFiles = ignoredFiles,
-        includedFiles = includedFiles
+  assert_that(
+    is.string(name),
+    is.buildtrigger_repo(trigger)
+  )
+
+  # build from a file in the repo
+  if(is.string(build)){
+    the_build <- NULL
+    the_filename <- build
+  } else {
+    assert_that(is.gar_Build(build))
+    the_filename <- NULL
+
+    # remove builds source
+    build$source <- NULL
+    the_build <- cr_build_make(build, source = NULL)
+
+  }
+
+  trigger_cloudsource <- NULL
+  trigger_github <- NULL
+  # trigger params
+  if(trigger$type == "github"){
+    trigger_github <- trigger$repo
+  } else if(trigger$type == "cloud_source"){
+    trigger_cloudsource <- trigger$repo
+  }
+
+  buildTrigger <- BuildTrigger(
+      name = name,
+      github = trigger_github,
+      triggerTemplate=trigger_cloudsource,
+      build = the_build,
+      filename = the_filename,
+      description = description,
+      tags = trigger_tags,
+      disabled = disabled,
+      substitutions = substitutions,
+      ignoredFiles = ignoredFiles,
+      includedFiles = includedFiles
     )
 
-    url <- sprintf("https://cloudbuild.googleapis.com/v1/projects/%s/triggers",
+  url <- sprintf("https://cloudbuild.googleapis.com/v1/projects/%s/triggers",
                    projectId)
-    # cloudbuild.projects.triggers.create
-    f <- gar_api_generator(url, "POST",
+  # cloudbuild.projects.triggers.create
+  f <- gar_api_generator(url, "POST",
                            data_parse_function = as.buildTriggerResponse)
-    stopifnot(inherits(buildTrigger, "BuildTrigger"))
+  stopifnot(inherits(buildTrigger, "BuildTrigger"))
 
-    f(the_body = buildTrigger)
+  f(the_body = buildTrigger)
 
 }
 
@@ -245,96 +276,6 @@ cr_buildtrigger_run <- function(triggerId,
     stopifnot(inherits(RepoSource, "gar_RepoSource"))
 
     f(the_body = RepoSource)
-
-}
-
-#' Create a buildtrigger object
-#' @family BuildTrigger functions
-#' @inheritDotParams cr_buildtrigger
-#' @export
-cr_buildtrigger_make <- function(...){
-
-  buildtrigger_make(...)
-
-}
-
-
-buildtrigger_make <- function(name,
-                              trigger,
-                              build,
-                              description = NULL,
-                              tags = NULL,
-                              disabled = FALSE,
-                              substitutions = NULL,
-                              ignoredFiles = NULL,
-                              includedFiles = NULL){
-
-    assert_that(any(is.gar_Build(build), is.string(build)),
-                is.string(name))
-
-    UseMethod("buildtrigger_make", trigger)
-}
-
-buildtrigger_make.gar_RepoSource <- function(name,
-                                            trigger,
-                                            build,
-                                            description = NULL,
-                                            tags = NULL,
-                                            disabled = FALSE,
-                                            substitutions = NULL,
-                                            ignoredFiles = NULL,
-                                            includedFiles = NULL){
-
-    filename <- NULL
-    if(is.string(build)){
-        filename <- build
-        build <- NULL
-    }
-
-    BuildTrigger(
-        name = name,
-        triggerTemplate=trigger,
-        build = build,
-        filename = filename,
-        description = description,
-        tags = tags,
-        disabled = disabled,
-        substitutions = substitutions,
-        ignoredFiles = ignoredFiles,
-        includedFiles = includedFiles
-    )
-
-}
-
-
-buildtrigger_make.GitHubEventsConfig <- function(name,
-                                            trigger,
-                                            build,
-                                            description = NULL,
-                                            tags = NULL,
-                                            disabled = FALSE,
-                                            substitutions = NULL,
-                                            ignoredFiles = NULL,
-                                            includedFiles = NULL){
-
-    filename <- NULL
-    if(is.string(build)){
-        filename <- build
-        build <- NULL
-    }
-
-    BuildTrigger(
-        name = name,
-        github=trigger,
-        build = build,
-        filename = filename,
-        description = description,
-        tags = tags,
-        disabled = disabled,
-        substitutions = substitutions,
-        ignoredFiles = ignoredFiles,
-        includedFiles = includedFiles
-    )
 
 }
 

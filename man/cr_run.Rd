@@ -10,10 +10,15 @@ cr_run(
   allowUnauthenticated = TRUE,
   concurrency = 1,
   port = NULL,
+  max_instances = "default",
+  memory = "256Mi",
+  cpu = 1,
   timeout = 600L,
   region = cr_region_get(),
   projectId = cr_project_get(),
-  launch_browser = interactive()
+  launch_browser = interactive(),
+  env_vars = NULL,
+  ...
 )
 }
 \arguments{
@@ -23,9 +28,15 @@ cr_run(
 
 \item{allowUnauthenticated}{TRUE if can be reached from public HTTP address.}
 
-\item{concurrency}{How many connections each image can serve. Can be up to 80.}
+\item{concurrency}{How many connections each container instance can serve. Can be up to 80.}
 
 \item{port}{Container port to receive requests at. Also sets the $PORT environment variable. Must be a number between 1 and 65535, inclusive. To unset this field, pass the special value "default".}
+
+\item{max_instances}{the desired maximum nuimber of container instances. "default" is 1000, you can get more if you requested a quota instance.  For Shiny instances on Cloud Run, this needs to be 1.}
+
+\item{memory}{The format for size is a fixed or floating point number followed by a unit: G, M, or K corresponding to gigabyte, megabyte, or kilobyte, respectively, or use the power-of-two equivalents: Gi, Mi, Ki corresponding to gibibyte, mebibyte or kibibyte respectively. The default is 256Mi}
+
+\item{cpu}{1 or 2 CPUs for your instance}
 
 \item{timeout}{Amount of time that this build should be allowed to run, to second}
 
@@ -34,6 +45,14 @@ cr_run(
 \item{projectId}{The GCP project from which the services should be listed}
 
 \item{launch_browser}{Whether to launch the logs URL in a browser once deployed}
+
+\item{env_vars}{Environment arguments passed to the Cloud Run container at runtime.  Distinct from \code{env} that run at build time.}
+
+\item{...}{
+  Arguments passed on to \code{\link[=cr_buildstep_run]{cr_buildstep_run}}
+  \describe{
+    \item{\code{}}{}
+  }}
 }
 \description{
 Deploys an existing gcr.io image.
@@ -47,6 +66,8 @@ Uses Cloud Build to deploy an image to Cloud Run
 cr_project_set("my-project")
 cr_region_set("europe-west1")
 cr_run("gcr.io/my-project/my-image")
+cr_run("gcr.io/cloud-tagging-10302018/gtm-cloud-image:stable",
+       env_vars = c("CONTAINER_CONFIG=xxxxxxx"))
 }
 }
 \seealso{

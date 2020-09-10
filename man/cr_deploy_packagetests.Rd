@@ -10,27 +10,43 @@ cr_deploy_packagetests(
   env = c("NOT_CRAN=true"),
   test_script = NULL,
   codecov_script = NULL,
-  codecov_token = "$_CODECOV_TOKEN",
-  build_image = "gcr.io/gcer-public/packagetools:master",
+  codecov_token = "$_CODECOV",
+  build_image = "gcr.io/gcer-public/packagetools:latest",
+  create_trigger = c("file", "inline", "no"),
+  trigger_repo = NULL,
   ...
 )
 }
 \arguments{
 \item{steps}{extra steps to run before the \link{cr_buildstep_packagetests} steps run (such as decryption of auth files)}
 
-\item{cloudbuild_file}{The cloudbuild yaml file to write to}
+\item{cloudbuild_file}{The cloudbuild yaml file to write to.  See create_trigger}
 
 \item{env}{Environment arguments to be set during the test script runs}
 
-\item{test_script}{The script that will run first making tests.  If \code{NULL} a default script it used}
+\item{test_script}{The script that will perform tests.  If \code{NULL} a default script is used in \code{system.file("r_buildsteps", "devtools_tests.R")}}
 
-\item{codecov_script}{The script that will run first making tests.  If \code{NULL} a default script it used}
+\item{codecov_script}{The script that will perform coverage.  If \code{NULL} a default script is used in \code{system.file("r_buildsteps", "codecov_tests.R")}}
 
-\item{codecov_token}{If using codecov, supply your codecov token here. Default assumes you add it to the Cloud Build substitution macros, which is more secure and recommended.}
+\item{codecov_token}{If using codecov, supply your codecov token here.}
 
 \item{build_image}{The docker image that will be used to run the R code for the test scripts}
 
-\item{...}{Other arguments passed to \link{cr_build_make}}
+\item{create_trigger}{If creating a trigger, whether to create it from the cloudbuild_file or inline}
+
+\item{trigger_repo}{If not NULL, a \link{cr_buildtrigger_repo} where a buildtrigger will be created via \link{cr_buildtrigger}}
+
+\item{...}{
+  Arguments passed on to \code{\link[=cr_build_make]{cr_build_make}}
+  \describe{
+    \item{\code{yaml}}{A \code{Yaml} object created from \link{cr_build_yaml} or a file location of a .yaml/.yml cloud build file}
+    \item{\code{artifacts}}{Artifacts that may be built via \link{cr_build_yaml_artifact}}
+    \item{\code{options}}{Options}
+    \item{\code{source}}{A \link{Source} object specifying the location of the source files to build, usually created by \link{cr_build_source}}
+    \item{\code{timeout}}{Amount of time that this build should be allowed to run, to second}
+    \item{\code{images}}{A list of images to be pushed upon the successful completion of all build}
+    \item{\code{substitutions}}{Substitutions data for `Build` resource}
+  }}
 }
 \description{
 This tests an R package each time you commit, and uploads the test coverage results to Codecov
@@ -40,21 +56,38 @@ The trigger repository needs to hold an R package configured to do tests upon.
 
 For GitHub, the repository will need to be linked to the project you are building within, via \url{https://console.cloud.google.com/cloud-build/triggers/connect}
 
-If your tests need authentication details, add these via \link{cr_buildstep_decrypt} to the \code{steps} argument, which will prepend decrypting the authentication file before running the tests.
+If your tests need authentication details, add these via \link{cr_buildstep_secret} to the \code{steps} argument, which will prepend decrypting the authentication file before running the tests.
 
 If you want codecov to ignore some files then also deploy a .covrignore file to your repository - see covr website at \url{https://covr.r-lib.org/} for details.
 }
 \examples{
 
-pd <- cr_deploy_packagetests()
+# create a local cloudbuild.yml file for packagetests
+pd <- cr_deploy_packagetests(create_trigger = "no")
 pd
 
 # add a decryption step for an auth file
 cr_deploy_packagetests(
   steps = cr_buildstep_secret("my_secret", "auth.json"),
   env = c("NOT_CRAN=true", "MY_AUTH_FILE=auth.json"),
-  timeout = 1200
+  timeout = 1200,
+  create_trigger = "no"
 )
+
+
+# creating a buildtrigger repo for trigger_repo
+repo <- cr_buildtrigger_repo("MarkEdmondson1234/googleCloudRunner",
+                             branch = "master")
+
+\dontrun{
+
+# will create the file in the repo, and point a buildtrigger at it
+cr_deploy_packagetests(create_trigger = "file", trigger_repo = repo)
+
+
+# will make an inline build within a buildtrigger
+cr_deploy_packagetests(create_trigger = "inline", trigger_repo = repo)
+}
 
 unlink("cloudbuild-tests.yml")
 
@@ -63,10 +96,10 @@ unlink("cloudbuild-tests.yml")
 Create your own custom deployment using \link{cr_buildstep_packagetests} which this function uses with some defaults
 
 Other Deployment functions: 
+\code{\link{cr_deploy_docker_trigger}()},
 \code{\link{cr_deploy_docker}()},
-\code{\link{cr_deploy_git_html}()},
-\code{\link{cr_deploy_github_docker}()},
 \code{\link{cr_deploy_pkgdown}()},
+\code{\link{cr_deploy_run_website}()},
 \code{\link{cr_deploy_run}()},
 \code{\link{cr_deploy_r}()}
 }

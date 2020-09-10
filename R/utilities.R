@@ -26,7 +26,7 @@ make_image_name <- function(name, projectId){
 }
 
 lower_alpha_dash <- function(x){
-  gsub("[^-a-zA-Z1-9]","-", x)
+  gsub("[^-a-zA-Z0-9]","-", x)
 }
 
 
@@ -63,7 +63,7 @@ myMessage <- function(..., level = 2){
   if(level >= compare_level){
     time <- paste(Sys.time(),">")
     mm <- paste(...)
-    if(grepl("^#", mm)){
+    if(grepl("^#", mm[[1]])){
       cli_h1(mm)
     } else {
       cli_div(theme = list(span.time = list(color = "grey")))

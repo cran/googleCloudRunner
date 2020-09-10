@@ -221,7 +221,7 @@ is.gar_StorageSource <- function(x){
 #' @param local Local directory containing the Dockerfile etc. you wish to deploy
 #' @param remote The name of the folder in your bucket
 #' @param bucket The Google Cloud Storage bucket to upload to
-#' @param predefinedAcl The ACL rules for the object uploaded.
+#' @param predefinedAcl The ACL rules for the object uploaded. Set to "bucketLevel" for buckets with bucket level access enabled
 #' @param deploy_folder Which folder to deploy from
 #'
 #' @details
@@ -265,21 +265,25 @@ cr_build_upload_gcs <- function(local,
   dir.create(deploy_folder, showWarnings = FALSE)
   myMessage(paste0("Copying files from ",
                    local, " to /", deploy_folder),
-            level = 3)
+            level = 2)
   file.copy(local, deploy_folder, recursive = TRUE)
   myMessage(paste0("Compressing files from /",
                    deploy_folder, " to ", tar_file),
-            level = 3)
+            level = 2)
   tar(tar_file,
       files = deploy_folder,
       compression = "gzip")
 
-  unlink(deploy_folder, recursive = TRUE)
+  on.exit(unlink(tar_file))
+  on.exit(unlink(deploy_folder, recursive = TRUE))
+
   myMessage(paste("Uploading",
                   tar_file, "to", paste0(bucket,"/", remote)),
             level = 3)
   gcs_upload(tar_file, bucket = bucket, name = remote,
              predefinedAcl = predefinedAcl)
+
+
 
   cr_build_source(StorageSource(bucket = bucket,
                                 object = remote))

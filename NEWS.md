@@ -1,3 +1,24 @@
+# googleCloudRunner 0.3.0
+
+* Move the setup wizard functions from `googleCloudRunner` to `googleAuthR` so they are available for all packages.
+* Check for Cloud Scheduler Service Agent is present for scheduler to work (#73)
+* `cr_build_upload_gcs()` will now clean up the files it makes when the function exits (#68 - thanks @MLud)
+* Support local testing in plumber example (#66 - thanks @samterfa)
+* Support multiple tags in Docker builds (#75)
+* Fix being able to pass built Cloud Build objects to schedule via `cr_build_schedule_http()` (#47)
+* Add progress for Cloud builds via library(progress) (#29)
+* Add support for Kaniko cache in `cr_buildstep_docker()` and `cr_deploy_docker()` (#46) -should see much quicker repeat builds
+* Let use of bucket level access control when using `cr_deploy_docker()`
+* Added support for creating buildtriggers from R (#78)
+* `cr_deploy_pkgdown()`, `cr_deploy_docker_trigger()` and `cr_deploy_packagetests()` now all have an option to create the build trigger for you
+* Add `cr_deploy_badger()` for creating build badges with Cloud Build via https://github.com/kelseyhightower/badger (#15)
+* Add `cr_deploy_run_website()` for rendering Rmd files then hosting on an nginx Cloud Run
+* The packagetools docker updates weekly `gcr.io/gcer-public/packagetools:latest` (#55)
+* Fix `cr_schedule()` crash of `overwrite=TRUE` but no existing schedule
+* Add deploy Shiny to k8s and Cloud Run example use cases
+* Allow max_instances in `cr_run` so it can run Shiny apps (#35)
+* Add `cr_buildstep_gcloud()` for optimum gcloud builds (#83)
+
 # googleCloudRunner 0.2.0
 
 * Add `port` argument to Cloud Run deployments via `cr_buildstep_run()`
