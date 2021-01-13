@@ -6,7 +6,8 @@
 #' @param roles the roles to grant access - default is all googleCloudRunner functions
 #'
 #' @export
-#' @import googleAuthR
+#' @importFrom googleAuthR gar_set_client gar_auth gar_service_grant_roles
+#' @importFrom assertthat assert_that is.string
 #' @family setup functions
 cr_setup_service <- function(account_email,
                              roles = cr_setup_role_lookup("local"),
@@ -14,20 +15,30 @@ cr_setup_service <- function(account_email,
                              email = Sys.getenv("GARGLE_EMAIL")
                              ){
 
+  # to prevent #94
+  assert_that(is.string(account_email))
+
+  the_roles <- paste(roles, collapse = " ")
+  account_email <- trimws(account_email)
   projectId <- gar_set_client(json,
                   scopes = "https://www.googleapis.com/auth/cloud-platform")
   if(email == ""){
     email <- NULL
   }
+  cli::cli_alert_info("Adding {account_email} for project {projectId} with roles: {the_roles}")
   gar_auth(email = email)
 
-  gar_service_grant_roles(trimws(account_email),
+  if("roles/cloudscheduler.serviceAgent" %in% roles){
+    # needs special project
+    projectId <- "gcp-sa-cloudscheduler"
+  }
+
+  gar_service_grant_roles(account_email,
                           roles = roles,
                           projectId = projectId)
 
-  the_roles <- NULL
-  the_roles <- paste(roles, collapse = " ")
-  cli_alert_success("Configured {account_email} with roles: {the_roles}")
+  cli::cli_alert_success("Configured {account_email} with roles: {the_roles}")
+  the_roles
 }
 
 

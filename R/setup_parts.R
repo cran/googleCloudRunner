@@ -1,15 +1,27 @@
-extract_project_number <- function(json = Sys.getenv("GAR_CLIENT_JSON")){
-  gsub("^([0-9]+?)\\-(.+)\\.apps.+","\\1",jsonlite::fromJSON(json)$installed$client_id)
+extract_project_number <- function(json){
+  o <- gsub("^([0-9]+?)\\-(.+)\\.apps.+","\\1",
+            jsonlite::fromJSON(json)$installed$client_id)
+  if(identical(o, character(0))){
+    # second try
+    o <- gsub("^([0-9]+?)\\-(.+)\\.apps.+","\\1",
+              jsonlite::fromJSON(json)$client_id)
+    if(identical(o, character(0))){
+      stop("Could not extract project number from ", json)
+    }
+  }
+  o
 }
 
 
 #' @noRd
 do_build_service_setup <- function(){
 
-  build_email <- paste0(extract_project_number(),
+  json <- Sys.getenv("GAR_CLIENT_JSON")
+  build_email <- paste0(extract_project_number(json),
                         "@cloudbuild.gserviceaccount.com")
+  projectId <- jsonlite::fromJSON(json)$installed$project_id
 
-  cli_alert_info("The Cloud Build service account ({build_email}) will need permissions during builds for certain operations calling other APIs.  This is distinct from the local authentication file you have setup.")
+  cli_alert_info("The Cloud Build service account ({build_email}) will need permissions during builds for certain operations calling other APIs.  This is distinct from the local authentication file you have setup.  Ensure Cloud Build is enabled at https://console.cloud.google.com/marketplace/product/google/cloudbuild.googleapis.com?project={projectId}")
   do_it <- menu(title = "What services do you want to setup for the Cloud Build service account? (Esc or 0 to skip)",
                 choices = c("Skip or something not listed below",
                             "All of the below (Recommended)",
@@ -57,7 +69,7 @@ do_build_service_setup <- function(){
 get_email_setup <- function(){
   email <- usethis::ui_yeah("Do you want to setup a Cloud Scheduler email?")
   if(email){
-    reuse_auth <- usethis::ui_yeah("Do you want to use the email from your JSON service account auth key?",
+    reuse_auth <- usethis::ui_yeah("Ensure that Cloud Scheduler is activated in your GCP console at https://console.cloud.google.com/cloudscheduler. Do you want to use the email from your JSON service account auth key?",
                                    yes = "Yes (Recommended)", no = "No")
     if(reuse_auth){
       if(Sys.getenv("GCE_AUTH_FILE") == ""){
@@ -65,16 +77,19 @@ get_email_setup <- function(){
         return(NULL)
       }
 
-      the_email <- jsonlite::fromJSON(Sys.getenv("GCE_AUTH_FILE"))$client_email
+      if(!assertthat::is.readable(Sys.getenv("GCE_AUTH_FILE"))){
+        stop("Found GCE_AUTH_FILE environment argument but could not read the file?
+             Found: ", Sys.getenv("GCE_AUTH_FILE"), call. = FALSE)
+      }
+
+      the_email <- tryCatch(jsonlite::fromJSON(Sys.getenv("GCE_AUTH_FILE"))$client_email,
+                            error = function(err){
+                              cli_alert_danger("Invalid JSON found in GCE_AUTH_FILE - incorrect JSON file?  Could not read client_email")
+                              stop(err$message)
+                            })
     } else {
       the_email <- readline("Enter the service email you wish to use")
     }
-
-    #ensure cloud scheduler service agent role present
-    schedule_email <- paste0("service-",
-                             extract_project_number(),
-                             "@gcp-sa-cloudscheduler.iam.gserviceaccount.com")
-    cr_setup_service(schedule_email, roles = cr_setup_role_lookup("schedule_agent"))
 
     cli_alert_info("Using email: {the_email}")
     return(paste0("CR_BUILD_EMAIL=", the_email))
@@ -170,14 +185,14 @@ get_bucket_setup <- function(){
         }
         make_bucket_name <- readline(
           paste("What name will the bucket be? It will be created in your project: ",
-                Sys.getenv("GCE_DEFAULT_PROJECT_ID"))
+                Sys.getenv("GCE_DEFAULT_PROJECT_ID"),": ")
         )
         new_bucket <- googleCloudStorageR::gcs_create_bucket(
           make_bucket_name, projectId = cr_project_get()
         )
         if(!is.null(new_bucket$kind) && new_bucket$kind == "storage#bucket"){
           cli_alert_success("Successfully created bucket {make_bucket_name}")
-          return(paste0("GCS_DEFAULT_BUCKET=", new_bucket))
+          return(paste0("GCS_DEFAULT_BUCKET=", make_bucket_name))
         }
 
       } else {

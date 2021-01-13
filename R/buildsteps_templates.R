@@ -282,7 +282,7 @@ cr_buildstep_run <- function(name,
   }
 
   if(!is.null(env_vars)){
-    env_vars <- paste0("--set_env_vars=", paste(env_vars, collapse = ","))
+    env_vars <- paste0("--set-env-vars=", paste(env_vars, collapse = ","))
   } else {
     env_vars <- "--clear-env-vars"
   }
@@ -439,7 +439,7 @@ cr_buildstep_r <- function(r,
     myMessage(paste0("Buildstep will download R script from ", r),
               level = 3)
     gs <- c(
-      cr_buildstep(
+      cr_buildstep_gcloud(
         "gsutil",
         id = paste("download r script"),
         args = c("cp", r, r_here)
@@ -661,7 +661,8 @@ cr_buildstep_pkgdown <- function(
     cr_buildstep_gitsetup(secret, post_setup = post_setup),
     cr_buildstep_git(c("clone",repo, "repo"), id = "clone to repo dir"),
     post_clone,
-    cr_buildstep_r(c("devtools::install()",
+    cr_buildstep_r(c("devtools::install_deps(dependencies=TRUE)",
+                     "devtools::install_local()",
                      "pkgdown::build_site()"),
                    name = build_image,
                    dir = "repo",
