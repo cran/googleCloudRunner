@@ -2,7 +2,7 @@ Package: googleCloudRunner
 Type: Package
 Title: R Scripts in the Google Cloud via Cloud Run, Cloud Build and
         Cloud Scheduler
-Version: 0.4.0
+Version: 0.4.1
 Authors@R: c(person("Mark", "Edmondson", email = "r@sunholo.com",
                   role = c("aut", "cre"),
                   comment = c(ORCID = "0000-0002-8434-3881")),
@@ -26,10 +26,12 @@ License: MIT + file LICENSE
 Encoding: UTF-8
 LazyData: true
 RoxygenNote: 7.1.0
+Config/testthat/edition: 3
+Config/testthat/parallel: true
 NeedsCompilation: no
-Packaged: 2021-01-13 14:16:08 UTC; mark
+Packaged: 2021-01-30 17:10:46 UTC; mark
 Author: Mark Edmondson [aut, cre] (<https://orcid.org/0000-0002-8434-3881>),
   Sunholo Ltd [cph]
 Maintainer: Mark Edmondson <r@sunholo.com>
 Repository: CRAN
-Date/Publication: 2021-01-13 15:10:02 UTC
+Date/Publication: 2021-01-30 17:30:02 UTC
