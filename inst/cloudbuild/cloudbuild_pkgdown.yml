@@ -1,14 +1,9 @@
 steps:
-- name: 'gcr.io/cloud-builders/gcloud'
-  id: decrypt gitkey
+- name: gcr.io/cloud-builders/gcloud
+  entrypoint: bash
   args:
-  - kms
-  - decrypt
-  - --ciphertext-file=cb_rsa.enc
-  - --plaintext-file=/root/.ssh/id_rsa
-  - --location=global
-  - --keyring=my-keyring
-  - --key=github-key
+  - -c
+  - gcloud secrets versions access latest --secret=github-ssh > /root/.ssh/id_rsa
   volumes:
   - name: 'ssh'
     path: /root/.ssh
@@ -49,6 +44,20 @@ steps:
     devtools::install()
     list.files()
     pkgdown::build_site()
+- name: gcr.io/google.com/cloudsdktool/cloud-sdk:alpine
+  args:
+  - bash
+  - -c
+  - gcloud run regions list > data-raw/regions.txt
+- name: gcr.io/google.com/cloudsdktool/cloud-sdk:alpine
+  args:
+  - bash
+  - -c
+  - gcloud compute zones list --format='value(name)' > data-raw/zones.txt
+- name: rocker/tidyverse
+  args:
+  - Rscript
+  - data-raw/cloudrun-regions.R
 # Push build - remember to restrict other builds away from /docs
 # otherwise it will trigger again in never ending git commit loop
 - name: 'gcr.io/cloud-builders/git'
@@ -60,7 +69,7 @@ steps:
   - |
     git add --all && \
     git status && \
-    git commit -a -m "[skip travis] Build website from commit ${COMMIT_SHA}: \
+    git commit -a -m "[skip ci] Build website from commit ${COMMIT_SHA}: \
                       $(date +"%Y%m%dT%H:%M:%S")" && \
     git push git@github.com:$_GITHUB_REPO
   volumes:

@@ -18,6 +18,7 @@ cr_run(
   projectId = cr_project_get(),
   launch_browser = interactive(),
   env_vars = NULL,
+  gcloud_args = NULL,
   ...
 )
 }
@@ -26,7 +27,7 @@ cr_run(
 
 \item{name}{Name for deployment on Cloud Run}
 
-\item{allowUnauthenticated}{TRUE if can be reached from public HTTP address.}
+\item{allowUnauthenticated}{TRUE if can be reached from public HTTP address. If FALSE will configure a service-email called \code{(name)-cloudrun-invoker@(project-id).iam.gserviceaccount.com}}
 
 \item{concurrency}{How many connections each container instance can serve. Can be up to 80.}
 
@@ -48,6 +49,8 @@ cr_run(
 
 \item{env_vars}{Environment arguments passed to the Cloud Run container at runtime.  Distinct from \code{env} that run at build time.}
 
+\item{gcloud_args}{a character string of arguments that can be sent to the gcloud command not covered by other parameters of this function}
+
 \item{...}{
   Arguments passed on to \code{\link[=cr_buildstep_run]{cr_buildstep_run}}
   \describe{
@@ -61,13 +64,13 @@ Deploys an existing gcr.io image.
 Uses Cloud Build to deploy an image to Cloud Run
 }
 \examples{
-
 \dontrun{
 cr_project_set("my-project")
 cr_region_set("europe-west1")
 cr_run("gcr.io/my-project/my-image")
 cr_run("gcr.io/cloud-tagging-10302018/gtm-cloud-image:stable",
-       env_vars = c("CONTAINER_CONFIG=xxxxxxx"))
+  env_vars = c("CONTAINER_CONFIG=xxxxxxx")
+)
 }
 }
 \seealso{
@@ -75,12 +78,14 @@ cr_run("gcr.io/cloud-tagging-10302018/gtm-cloud-image:stable",
 
 Use \link{cr_deploy_docker} or similar to create image, \link{cr_deploy_run} to automate building and deploying, \link{cr_deploy_plumber} to deploy plumber APIs.
 
-\href{https://cloud.google.com/cloud-build/docs/deploying-builds/deploy-cloud-run}{Deploying Cloud Run using Cloud Build}
+\href{https://cloud.google.com/build/docs/deploying-builds/deploy-cloud-run}{Deploying Cloud Run using Cloud Build}
 
 Other Cloud Run functions: 
 \code{\link{cr_jwt_create}()},
 \code{\link{cr_plumber_pubsub}()},
+\code{\link{cr_run_email}()},
 \code{\link{cr_run_get}()},
-\code{\link{cr_run_list}()}
+\code{\link{cr_run_list}()},
+\code{\link{cr_run_schedule_http}()}
 }
 \concept{Cloud Run functions}

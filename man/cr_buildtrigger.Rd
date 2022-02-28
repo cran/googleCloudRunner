@@ -2,7 +2,7 @@
 % Please edit documentation in R/buildtriggers.R
 \name{cr_buildtrigger}
 \alias{cr_buildtrigger}
-\title{Creates a new `BuildTrigger`.This API is experimental.}
+\title{Create a new BuildTrigger}
 \usage{
 cr_buildtrigger(
   build,
@@ -14,7 +14,9 @@ cr_buildtrigger(
   ignoredFiles = NULL,
   includedFiles = NULL,
   trigger_tags = NULL,
-  projectId = cr_project_get()
+  projectId = cr_project_get(),
+  sourceToBuild = NULL,
+  overwrite = FALSE
 )
 }
 \arguments{
@@ -22,7 +24,7 @@ cr_buildtrigger(
 
 \item{name}{User assigned name of the trigger}
 
-\item{trigger}{The trigger source created via \link{cr_buildtrigger_repo}}
+\item{trigger}{The trigger source created via \link{cr_buildtrigger_repo} or a pubsub trigger made with \link{cr_buildtrigger_pubsub} or a webhook trigger made with \link{cr_buildtrigger_webhook}}
 
 \item{description}{Human-readable description of this trigger}
 
@@ -37,18 +39,25 @@ cr_buildtrigger(
 \item{trigger_tags}{Tags for the buildtrigger listing}
 
 \item{projectId}{ID of the project for which to configure automatic builds}
+
+\item{sourceToBuild}{A \link{cr_buildtrigger_repo} object (but no regex allowed for branch or tag)  This field is currently only used by Webhook, Pub/Sub, Manual, and Cron triggers and is the source of the build will execute upon.}
+
+\item{overwrite}{If TRUE will overwrite an existing trigger with the same name}
 }
 \description{
-Creates a new `BuildTrigger`.This API is experimental.
+Build Triggers are a way to have your builds respond to various events, most commonly a git commit or a pubsub event.
 }
 \details{
 Any source specified in the build will be overwritten to use the trigger as a source (GitHub or Cloud Source Repositories)
+
+If you want multiple triggers for a build, then duplicate the build and create another build under a different name but with a different trigger.  Its easier to keep track of.
 }
 \examples{
 cr_project_set("my-project")
 cr_bucket_set("my-bucket")
 cloudbuild <- system.file("cloudbuild/cloudbuild.yaml",
-                           package = "googleCloudRunner")
+  package = "googleCloudRunner"
+)
 bb <- cr_build_make(cloudbuild)
 
 # repo hosted on GitHub
@@ -56,8 +65,8 @@ gh_trigger <- cr_buildtrigger_repo("MarkEdmondson1234/googleCloudRunner")
 
 # repo mirrored to Cloud Source Repositories
 cs_trigger <- cr_buildtrigger_repo("github_markedmondson1234_googlecloudrunner",
-                                   type = "cloud_source")
-
+  type = "cloud_source"
+)
 \dontrun{
 # build with in-line build code
 cr_buildtrigger(bb, name = "bt-github-inline", trigger = gh_trigger)
@@ -67,12 +76,48 @@ cr_buildtrigger(bb, name = "bt-github-inline", trigger = cs_trigger)
 
 # build pointing to cloudbuild.yaml within the GitHub repo
 cr_buildtrigger("inst/cloudbuild/cloudbuild.yaml",
-                 name = "bt-github-file", trigger = gh_trigger)
+  name = "bt-github-file", trigger = gh_trigger
+)
 
 # build with repo mirror from file
 cr_buildtrigger("inst/cloudbuild/cloudbuild.yaml",
-                 name = "bt-cs-file", trigger = cs_trigger)
+  name = "bt-cs-file", trigger = cs_trigger
+)
 }
+
+# creating build triggers that respond to pubsub events
+\dontrun{
+# create a pubsub topic either in webUI or via library(googlePubSubR)
+library(googlePubsubR)
+pubsub_auth()
+topics_create("test-topic")
+}
+
+# create build trigger that will work from pub/subscription
+pubsub_trigger <- cr_buildtrigger_pubsub("test-topic")
+pubsub_trigger
+\dontrun{
+# create the build trigger with in-line build
+cr_buildtrigger(bb, name = "pubsub-triggered", trigger = pubsub_trigger)
+# create scheduler that calls the pub/sub topic
+
+cr_schedule("cloud-build-pubsub",
+  "15 5 * * *",
+  pubsubTarget = cr_schedule_pubsub("test-topic")
+)
+}
+
+# create a pubsub trigger that uses github as a source of code to build upon
+gh <- cr_buildtrigger_repo("MarkEdmondson1234/googleCloudRunner")
+blist <- cr_build_make(cr_build_yaml(cr_buildstep_r('list.files()')))
+
+\dontrun{
+cr_buildtrigger(blist,
+                name = "pubsub-triggered-github-source",
+                trigger = pubsub_trigger,
+                sourceToBuild = gh)
+}
+
 }
 \seealso{
 Other BuildTrigger functions: 
@@ -83,7 +128,9 @@ Other BuildTrigger functions:
 \code{\link{cr_buildtrigger_edit}()},
 \code{\link{cr_buildtrigger_get}()},
 \code{\link{cr_buildtrigger_list}()},
+\code{\link{cr_buildtrigger_pubsub}()},
 \code{\link{cr_buildtrigger_repo}()},
-\code{\link{cr_buildtrigger_run}()}
+\code{\link{cr_buildtrigger_run}()},
+\code{\link{cr_buildtrigger_webhook}()}
 }
 \concept{BuildTrigger functions}

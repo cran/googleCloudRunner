@@ -9,33 +9,29 @@
 #' @examples
 #'
 #' cr_region_get()
-cr_region_set <- function(region = c("europe-west1",
-                                     "us-central1",
-                                     "asia-northeast1",
-                                     "us-east1")){
-
+cr_region_set <- function(region = googleCloudRunner::cr_regions) {
   region <- match.arg(region)
 
   .cr_env$region <- region
 
-  myMessage("Region set to ", .cr_env$region, level = 3)
+  myMessage("Region set to", .cr_env$region, level = 3)
   .cr_env$region
 }
 
 #' @rdname cr_region_set
 #' @export
-cr_region_get <- function(){
-
-  if(!is.null(.cr_env$region)){
+cr_region_get <- function() {
+  if (!is.null(.cr_env$region)) {
     return(.cr_env$region)
   }
 
-  if(Sys.getenv("CR_REGION") != ""){
+  if (Sys.getenv("CR_REGION") != "") {
     .cr_env$region <- Sys.getenv("CR_REGION")
   }
-  if(is.null(.cr_env$region)){
+  if (is.null(.cr_env$region)) {
     stop("No region set - use cr_region_set() or env arg CR_REGION",
-         call. = FALSE)
+      call. = FALSE
+    )
   }
   .cr_env$region
 }
@@ -51,28 +47,27 @@ cr_region_get <- function(){
 #' @examples
 #'
 #' cr_project_get()
-cr_project_set <- function(projectId){
-
+cr_project_set <- function(projectId) {
   .cr_env$project <- projectId
 
-  myMessage("ProjectId set to ", .cr_env$project, level = 3)
+  myMessage("ProjectId set to", .cr_env$project, level = 3)
   .cr_env$project
 }
 
 #' @rdname cr_project_set
 #' @export
-cr_project_get <- function(){
-
-  if(!is.null(.cr_env$project)){
+cr_project_get <- function() {
+  if (!is.null(.cr_env$project)) {
     return(.cr_env$project)
   }
 
-  if(Sys.getenv("GCE_DEFAULT_PROJECT_ID") != ""){
+  if (Sys.getenv("GCE_DEFAULT_PROJECT_ID") != "") {
     .cr_env$project <- Sys.getenv("GCE_DEFAULT_PROJECT_ID")
   }
-  if(is.null(.cr_env$project)){
+  if (is.null(.cr_env$project)) {
     stop("No projectId set - use cr_project_set() or env arg GCE_DEFAULT_PROJECT_ID",
-         call. = FALSE)
+      call. = FALSE
+    )
   }
   .cr_env$project
 }
@@ -89,46 +84,45 @@ cr_project_get <- function(){
 #' @examples
 #'
 #' cr_bucket_get()
-cr_bucket_set <- function(bucket){
-
+cr_bucket_set <- function(bucket) {
   .cr_env$bucket <- bucket
 
-  myMessage("Bucket set to ", .cr_env$bucket, level = 3)
+  myMessage("Bucket set to", .cr_env$bucket, level = 3)
   .cr_env$bucket
 }
 
 #' @export
 #' @rdname cr_bucket_set
-cr_bucket_get <- function(){
-
-  if(!is.null(.cr_env$bucket)){
+cr_bucket_get <- function() {
+  if (!is.null(.cr_env$bucket)) {
     return(.cr_env$bucket)
   }
 
-  if(Sys.getenv("GCS_DEFAULT_BUCKET") != ""){
+  if (Sys.getenv("GCS_DEFAULT_BUCKET") != "") {
     .cr_env$bucket <- Sys.getenv("GCS_DEFAULT_BUCKET")
   }
-  if(is.null(.cr_env$bucket)){
+  if (is.null(.cr_env$bucket)) {
     stop("No bucket set - use cr_bucket_set() or env arg GCS_DEFAULT_BUCKET",
-         call. = FALSE)
+      call. = FALSE
+    )
   }
   .cr_env$bucket
 }
 
 #' @rdname cr_email_set
 #' @export
-cr_email_get <- function(){
-
-  if(!is.null(.cr_env$cloudbuildEmail)){
+cr_email_get <- function() {
+  if (!is.null(.cr_env$cloudbuildEmail)) {
     return(.cr_env$cloudbuildEmail)
   }
 
-  if(Sys.getenv("CR_BUILD_EMAIL") != ""){
+  if (Sys.getenv("CR_BUILD_EMAIL") != "") {
     .cr_env$cloudbuildEmail <- Sys.getenv("CR_BUILD_EMAIL")
   }
-  if(is.null(.cr_env$cloudbuildEmail)){
+  if (is.null(.cr_env$cloudbuildEmail)) {
     stop("No cloudbuildEmail set - use cr_email_set() or env arg CR_BUILD_EMAIL",
-         call. = FALSE)
+      call. = FALSE
+    )
   }
   .cr_env$cloudbuildEmail
 }
@@ -144,9 +138,9 @@ cr_email_get <- function(){
 #' @examples
 #' cr_email_set("myemail@domain.com")
 #' cr_email_get()
-cr_email_set <- function(cloudbuildEmail){
+cr_email_set <- function(cloudbuildEmail) {
   .cr_env$cloudbuildEmail <- cloudbuildEmail
 
-  myMessage("cloudbuildEmail set to ", .cr_env$cloudbuildEmail, level = 3)
+  myMessage("cloudbuildEmail set to", .cr_env$cloudbuildEmail, level = 3)
   .cr_env$cloudbuildEmail
 }

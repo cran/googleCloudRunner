@@ -17,21 +17,23 @@ Write out a Build object to cloudbuild.yaml
 \examples{
 cr_project_set("my-project")
 # write from creating a Yaml object
-image = "gcr.io/my-project/my-image$BUILD_ID"
-run_yaml <- cr_build_yaml(steps = c(
-    cr_buildstep("docker", c("build","-t",image,".")),
-    cr_buildstep("docker", c("push",image)),
-    cr_buildstep("gcloud", c("beta","run","deploy", "test1", "--image", image))),
-  images = image)
-
+image <- "gcr.io/my-project/my-image$BUILD_ID"
+run_yaml <- cr_build_yaml(
+  steps = c(
+    cr_buildstep("docker", c("build", "-t", image, ".")),
+    cr_buildstep("docker", c("push", image)),
+    cr_buildstep("gcloud", c("beta", "run", "deploy", "test1", "--image", image))
+  ),
+  images = image
+)
 \dontrun{
 cr_build_write(run_yaml)
 }
 
 # write from a Build object
 build <- cr_build_make(system.file("cloudbuild/cloudbuild.yaml",
-                                   package = "googleCloudRunner"))
-
+  package = "googleCloudRunner"
+))
 \dontrun{
 cr_build_write(build)
 }
@@ -43,11 +45,15 @@ Other Cloud Build functions:
 \code{\link{Source}()},
 \code{\link{StorageSource}()},
 \code{\link{cr_build_artifacts}()},
+\code{\link{cr_build_list}()},
+\code{\link{cr_build_logs}()},
 \code{\link{cr_build_make}()},
 \code{\link{cr_build_status}()},
+\code{\link{cr_build_targets}()},
 \code{\link{cr_build_upload_gcs}()},
 \code{\link{cr_build_wait}()},
 \code{\link{cr_build_yaml_artifact}()},
+\code{\link{cr_build_yaml_secrets}()},
 \code{\link{cr_build_yaml}()},
 \code{\link{cr_build}()}
 }

@@ -1,3 +1,31 @@
+# googleCloudRunner 0.5.0
+
+* Add checks for Cloud Build email roles in `cr_setup()`
+* Add direct Secret Manager environment args in builds via `availableSecrets` (#106)
+* Add support for `logsBucket` in `cr_build_yaml` and `cr_build_make`
+* Add `cr_build_list()` and `cr_build_list_filter()` 
+* Add `cr_build_logs()` and `cr_buildtrigger_logs()` and `cr_build_logs_badger()`
+* Made Cloud Build status messages prettier
+* Add messaging to `cr_build_upload_gcs()` saying where deploy folder is (#110) and clean up tar.gz folder correctly
+* Add `gcloud_args` to `cr_buildstep_run()` and `cr_run()` and `cr_deploy_run()` to allow more customisation (#113)
+* Add `cr_run_schedule_http()` to schedule Cloud Run HTTP calls (#113)
+* Allow usage of `cr_build_yaml()` objects directly in `cr_buildtrigger()` without needing `cr_build_make()`
+* Fix `cr_deploy_pkgdown()` error writing to file
+* Allow `escape_dollar` in `cr_buildstep_r()` and `cr_buildstep_bash()` if you want to use Cloud Build substitutions in the script (#104)
+* Allow direct support for Codecov (#116)
+* Parse `gar_Build` objects to lists in buildtrigger responses so they can be more easily reused
+* Fix bug with Cloud Run deployments not returning image names (#141 - thanks @engti)
+* Added rscript_args to `cr_buildstep_r()` - (#128 - thanks @simonsays1980)
+* All `cr_setup_test()` to be run without the interactive menu (#129 - thanks @muschellij2)
+* Add `cr_regions` data that lists available Cloud Run regions (thanks @muschellij2)
+* Allow specification of a target GCP project if it differs from the build project in `cr_deploy_docker_trigger()`
+* Force lowercase for docker image names as they are only valid for kaniko in `cr_deploy_docker_trigger()`
+* Fix bug parsing out listing build triggers in `cr_buildtrigger_list()`
+* Fix paging issue sometimes returning NULL for `cr_build_list()` (#149)
+* Update `cr_deploy_r()` to use PubSub/BuildTrigger as its default when scheduling (#148)
+* Add support for running `targets::tar_make()` pipelines on Cloud Build via `cr_build_targets()` (#155)
+* Rename `cr_build_schedule_http()` to `cr_schedule_http()` to be more in line with `cr_schedule_pubsub()` and `cr_schedule_build()`
+
 # googleCloudRunner 0.4.1
 
 * Fix faulty test for `cr_setup_tests()` that was failing option 3 (#104)
@@ -6,14 +34,14 @@
 
 # googleCloudRunner 0.4.0
 
-* Remove checking for existance of cloudscheduler.serviceAgent (#89 - thanks @BillPetti)
+* Remove checking for existence of cloudscheduler.serviceAgent (#89 - thanks @BillPetti)
 * Setting env vars for Cloud Run runtime deployments fixed 
 * Added `cr_jwt_create()` and family to create JWTs to call authenticated services such as Cloud Run (#91)
 * Add authenticated Cloud Run use case
 * Ensure timeout is under 86400 secs (24hrs) in `cr_build_make()`
 * Add `cr_buildtrigger_copy()`
-* Extra checks for existance of valid auth file when creating build email (#89)
-* We can't check for existance of cloud build email #94 so `cr_setup()` will only set roles in assumed present Google service emails.
+* Extra checks for existence of valid auth file when creating build email (#89)
+* We can't check for existence of cloud build email #94 so `cr_setup()` will only set roles in assumed present Google service emails.
 * Include `plumber` in Depends as its needed for most applications - makes `FROM gcr.io/gcer-public/googlecloudrunner:master` more useful in Docker files.
 * Update example plumber deployment to use Rscript to start plumber server (#97)
 * Add R to git use case example

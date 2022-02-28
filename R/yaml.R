@@ -10,19 +10,24 @@
 #' @param tags Tags for the build
 #' @param secrets A secrets object
 #' @param images What images will be build from this cloudbuild
-#' @param artifacts What artifacts may be built from this cloudbuild
+#' @param artifacts What artifacts may be built from this cloudbuild - create via \link{cr_build_yaml_artifact}
+#' @param availableSecrets What environment arguments from Secret Manager are available to the build - create via \link{cr_build_yaml_secrets}
+#' @param serviceAccount What service account should the build be run under?
 #'
-#' @seealso \href{https://cloud.google.com/cloud-build/docs/build-config}{Build configuration overview for cloudbuild.yaml}
+#' @seealso \href{https://cloud.google.com/build/docs/build-config-file-schema}{Build configuration overview for cloudbuild.yaml}
 #' @export
 #' @family Cloud Build functions
 #' @examples
 #' cr_project_set("my-project")
 #' image <- "gcr.io/my-project/my-image"
-#' cr_build_yaml(steps = c(
-#'     cr_buildstep("docker", c("build","-t",image,".")),
-#'     cr_buildstep("docker", c("push",image)),
-#'     cr_buildstep("gcloud", c("beta","run","deploy", "test1", "--image", image))),
-#'   images = image)
+#' cr_build_yaml(
+#'   steps = c(
+#'     cr_buildstep("docker", c("build", "-t", image, ".")),
+#'     cr_buildstep("docker", c("push", image)),
+#'     cr_buildstep("gcloud", c("beta", "run", "deploy", "test1", "--image", image))
+#'   ),
+#'   images = image
+#' )
 cr_build_yaml <- function(steps,
                           timeout = NULL,
                           logsBucket = NULL,
@@ -30,21 +35,26 @@ cr_build_yaml <- function(steps,
                           substitutions = NULL,
                           tags = NULL,
                           secrets = NULL,
+                          availableSecrets = NULL,
                           images = NULL,
-                          artifacts = NULL){
-
-  timeout <- check_timeout(timeout)
+                          artifacts = NULL,
+                          serviceAccount = NULL) {
+  if (!is.null(artifacts)) {
+    assert_that(is.cr_build_artifact(artifacts))
+  }
 
   Yaml(
     steps = steps,
-    timeout = timeout,
+    timeout = check_timeout(timeout),
     logsBucket = logsBucket,
     options = options,
     substitutions = substitutions,
     tags = string_to_list(tags),
     secrets = secrets,
+    availableSecrets = parse_yaml_secret_list(availableSecrets),
     images = string_to_list(images),
-    artifacts = artifacts
+    artifacts = artifacts,
+    serviceAccount = serviceAccount
   )
 }
 
@@ -59,51 +69,131 @@ cr_build_yaml <- function(steps,
 #' @family Cloud Build functions
 #' @export
 #' @examples
+#' \dontrun{
 #' cr_project_set("my-project")
 #' r <- "write.csv(mtcars,file = 'artifact.csv')"
 #' cr_build_yaml(
 #'   steps = cr_buildstep_r(r),
-#'   artifacts = cr_build_yaml_artifact('artifact.csv', bucket = "my-bucket")
-#'   )
+#'   artifacts = cr_build_yaml_artifact("artifact.csv", bucket = "my-bucket")
+#' )
+#' }
 cr_build_yaml_artifact <- function(paths,
                                    bucket_dir = NULL,
-                                   bucket = cr_bucket_get()){
-  if(grepl("^gs://", bucket)){
+                                   bucket = cr_bucket_get()) {
+  if (grepl("^gs://", bucket)) {
     location <- bucket
   } else {
     location <- paste0("gs://", bucket)
   }
 
 
-  if(!is.null(bucket_dir)){
+  if (!is.null(bucket_dir)) {
     location <- paste0(location, "/", bucket_dir)
   }
 
-  list(
+  structure(list(
     objects = list(
       location = location,
       paths = string_to_list(paths)
     )
-  )
+  ), class = c("cr_build_artifact", "list"))
 }
 
+is.cr_build_artifact <- function(x) {
+  inherits(x, "cr_build_artifact")
+}
+
+#' Create an availableSecrets entry for build yaml
+#'
+#' This creates the availabelSecrets entry for Builds so they can use Secret Manager environment arguments in the builds.
+#'
+#' @param secretEnv The name of the secretEnv that will be referred to in the build steps e.g. \code{'GH_TOKEN'}
+#' @param projectId The project to get the Secret from
+#' @inheritParams cr_buildstep_secret
+#' @family Cloud Build functions
+#' @export
+#' @seealso To download from Secret Manager to a file in a dedicated buildstep see \link{cr_buildstep_secret}.
+#' @seealso \href{https://cloud.google.com/build/docs/securing-builds/use-secrets}{Using secrets from Secret Manager}
+#'
+#' @examples
+#'
+#' cr_build_yaml_secrets("GH_TOKEN", "github_token")
+#'
+#' s1 <- cr_build_yaml_secrets("USERNAME", "my_username")
+#' s2 <- cr_build_yaml_secrets("PASSWORD", "my_password")
+#'
+#' # use one $ in scripts to use the secretEnv (will be replaced by $$)
+#' cr_build_yaml(
+#'   steps = cr_buildstep(
+#'     "docker",
+#'     entrypoint = "bash",
+#'     args = c(
+#'       "-c",
+#'       "docker login --username=$USERNAME --password=$PASSWORD"
+#'     ),
+#'     secretEnv = c("USERNAME", "PASSWORD")
+#'   ),
+#'   availableSecrets = list(s1, s2)
+#' )
+cr_build_yaml_secrets <- function(secretEnv,
+                                  secret,
+                                  version = "latest",
+                                  projectId = cr_project_get()) {
+  assert_that(
+    is.string(secretEnv),
+    is.string(secret),
+    is.string(version),
+    is.string(projectId)
+  )
+
+  structure(list(
+    versionName = sprintf(
+      "projects/%s/secrets/%s/versions/%s",
+      projectId, secret, version
+    ),
+    env = secretEnv
+  ), class = c("cr_yaml_secret", "list"))
+}
+
+is.yaml_secret <- function(x) {
+  inherits(x, "cr_yaml_secret")
+}
+
+parse_yaml_secret_list <- function(availableSecrets) {
+
+  if (is.null(availableSecrets)) {
+    return(NULL)
+  }
+
+  if (is.yaml_secret(availableSecrets)) {
+    return(list(secretManager = list(availableSecrets)))
+  }
+
+  assert_that(all(
+    unlist(
+      lapply(availableSecrets, inherits, "cr_yaml_secret")
+    )
+  ))
+
+  list(secretManager = availableSecrets)
+}
 
 
 #' @noRd
 #' @import assertthat
-check_timeout <- function(timeout){
+check_timeout <- function(timeout) {
+  if (is.null(timeout)) {
+    return(NULL)
+  }
 
-  if(is.null(timeout)) return(NULL)
-
-  if(is.string(timeout)){
+  if (is.string(timeout)) {
     assert_that(grepl("s$", timeout))
     return(timeout)
   }
 
   assert_that(is.numeric(timeout))
   assert_that(timeout <= 86400)
-  paste0(as.integer(timeout),"s")
-
+  paste0(as.integer(timeout), "s")
 }
 
 
@@ -116,35 +206,38 @@ check_timeout <- function(timeout){
 #' @family Cloud Build functions, yaml functions
 #' @examples
 #' cr_project_set("my-project")
-#' Yaml(steps = c(
-#'       cr_buildstep("docker", "version"),
-#'       cr_buildstep("gcloud", "version")),
-#'     images = "gcr.io/my-project/my-image",
-#'     timeout = "660s")
-Yaml <- function(...){
+#' Yaml(
+#'   steps = c(
+#'     cr_buildstep("docker", "version"),
+#'     cr_buildstep("gcloud", "version")
+#'   ),
+#'   images = "gcr.io/my-project/my-image",
+#'   timeout = "660s"
+#' )
+Yaml <- function(...) {
   structure(
     rmNullObs(list(...)),
-    class = c("cr_yaml","list")
+    class = c("cr_yaml", "list")
   )
 }
 
-is.Yaml <- function(x){
+is.Yaml <- function(x) {
   inherits(x, "cr_yaml")
 }
 
 #' @import assertthat
 #' @importFrom yaml read_yaml
 #' @noRd
-get_cr_yaml <- function(x){
-  if(is.Yaml(x)){
+get_cr_yaml <- function(x) {
+  if (is.Yaml(x)) {
     return(x)
-  } else if(assertthat::is.string(x)){
+  } else if (assertthat::is.string(x)) {
     # its a yaml file
     assert_that(
       is.readable(x),
       grepl("\\.ya?ml$", x, ignore.case = TRUE)
     )
-  } else if(is.gar_Build(x)){
+  } else if (is.gar_Build(x)) {
     # an existing build
     return(x)
   } else {
@@ -164,31 +257,33 @@ get_cr_yaml <- function(x){
 #' @examples
 #' cr_project_set("my-project")
 #' # write from creating a Yaml object
-#' image = "gcr.io/my-project/my-image$BUILD_ID"
-#' run_yaml <- cr_build_yaml(steps = c(
-#'     cr_buildstep("docker", c("build","-t",image,".")),
-#'     cr_buildstep("docker", c("push",image)),
-#'     cr_buildstep("gcloud", c("beta","run","deploy", "test1", "--image", image))),
-#'   images = image)
-#'
+#' image <- "gcr.io/my-project/my-image$BUILD_ID"
+#' run_yaml <- cr_build_yaml(
+#'   steps = c(
+#'     cr_buildstep("docker", c("build", "-t", image, ".")),
+#'     cr_buildstep("docker", c("push", image)),
+#'     cr_buildstep("gcloud", c("beta", "run", "deploy", "test1", "--image", image))
+#'   ),
+#'   images = image
+#' )
 #' \dontrun{
 #' cr_build_write(run_yaml)
 #' }
 #'
 #' # write from a Build object
 #' build <- cr_build_make(system.file("cloudbuild/cloudbuild.yaml",
-#'                                    package = "googleCloudRunner"))
-#'
+#'   package = "googleCloudRunner"
+#' ))
 #' \dontrun{
 #' cr_build_write(build)
 #' }
-cr_build_write <- function(x, file = "cloudbuild.yaml"){
+cr_build_write <- function(x, file = "cloudbuild.yaml") {
   myMessage("Writing to", file, level = 3)
   UseMethod("cr_build_write", x)
 }
 
 #' @export
-cr_build_write.gar_Build <- function(x, file = "cloudbuild.yaml"){
+cr_build_write.gar_Build <- function(x, file = "cloudbuild.yaml") {
   o <- rmNullObs(cr_build_yaml(
     steps = x$steps,
     images = x$images,
@@ -198,7 +293,8 @@ cr_build_write.gar_Build <- function(x, file = "cloudbuild.yaml"){
     substitutions = x$substitutions,
     tags = x$tags,
     secrets = x$secrets,
-    artifacts = x$artifacts
+    artifacts = x$artifacts,
+    serviceAccount = x$serviceAccount
   ))
   cr_build_write.cr_yaml(o, file)
   file
@@ -206,10 +302,10 @@ cr_build_write.gar_Build <- function(x, file = "cloudbuild.yaml"){
 
 #' @export
 #' @importFrom yaml write_yaml
-cr_build_write.cr_yaml <- function(x, file = "cloudbuild.yaml"){
-  o <- write_yaml(x, file = file, indent.mapping.sequence = TRUE)
+cr_build_write.cr_yaml <- function(x, file = "cloudbuild.yaml") {
+  write_yaml(x, file = file, indent.mapping.sequence = TRUE)
   write(paste("#Generated by googleCloudRunner::cr_build_write at", Sys.time()),
-        file = file, append = TRUE)
+    file = file, append = TRUE
+  )
   file
 }
-

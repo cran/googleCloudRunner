@@ -13,9 +13,9 @@ cr_buildstep_packagetests(
 )
 }
 \arguments{
-\item{test_script}{The script that will perform tests.  If \code{NULL} a default script is used in \code{system.file("r_buildsteps", "devtools_tests.R")}}
+\item{test_script}{The script that will call \link[rcmdcheck]{rcmdcheck} to perform tests.  If \code{NULL} a default script is used in \code{system.file("r_buildsteps", "devtools_tests.R", package="googlecloudRunner")}}
 
-\item{codecov_script}{The script that will perform coverage.  If \code{NULL} a default script is used in \code{system.file("r_buildsteps", "codecov_tests.R")}}
+\item{codecov_script}{The script that will call \link[covr]{codecov} to perform coverage.  If \code{NULL} a default script is used in \code{system.file("r_buildsteps", "codecov_tests.R", package="googleCloudRunner")}}
 
 \item{codecov_token}{If using codecov, supply your codecov token here.}
 
@@ -26,8 +26,47 @@ cr_buildstep_packagetests(
 \description{
 This lets you run R package tests and is intended to be used in a trigger when you push to a repository so you can monitor code quality.
 }
+\details{
+If using codecov, these environment arguments are added to aid with the codecoverage:
+
+\code{
+* "CODECOV_TOKEN=$_CODECOV_TOKEN"
+* "GCB_PROJECT_ID=$PROJECT_ID"
+* "GCB_BUILD_ID=$BUILD_ID"
+* "GCB_COMMIT_SHA=$COMMIT_SHA"
+* "GCB_REPO_NAME=$REPO_NAME"
+* "GCB_BRANCH_NAME=$BRANCH_NAME"
+* "GCB_TAG_NAME=$TAG_NAME"
+* "GCB_HEAD_BRANCH=$_HEAD_BRANCH"
+* "GCB_BASE_BRANCH=$_BASE_BRANCH"
+* "GCB_HEAD_REPO_URL=$_HEAD_REPO_URL"
+* "GCB_PR_NUMBER=$_PR_NUMBER"
+}
+}
 \examples{
 
 cr_buildstep_packagetests()
-
 }
+\seealso{
+\url{https://docs.codecov.com/reference}
+
+Other Cloud Buildsteps: 
+\code{\link{cr_buildstep_bash}()},
+\code{\link{cr_buildstep_decrypt}()},
+\code{\link{cr_buildstep_df}()},
+\code{\link{cr_buildstep_docker}()},
+\code{\link{cr_buildstep_edit}()},
+\code{\link{cr_buildstep_extract}()},
+\code{\link{cr_buildstep_gcloud}()},
+\code{\link{cr_buildstep_gitsetup}()},
+\code{\link{cr_buildstep_mailgun}()},
+\code{\link{cr_buildstep_nginx_setup}()},
+\code{\link{cr_buildstep_pkgdown}()},
+\code{\link{cr_buildstep_run}()},
+\code{\link{cr_buildstep_r}()},
+\code{\link{cr_buildstep_secret}()},
+\code{\link{cr_buildstep_slack}()},
+\code{\link{cr_buildstep_targets}()},
+\code{\link{cr_buildstep}()}
+}
+\concept{Cloud Buildsteps}

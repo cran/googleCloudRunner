@@ -4,7 +4,13 @@
 \alias{cr_buildstep_secret}
 \title{Create a buildstep for using Secret Manager}
 \usage{
-cr_buildstep_secret(secret, decrypted, version = "latest", ...)
+cr_buildstep_secret(
+  secret,
+  decrypted,
+  version = "latest",
+  binary_mode = FALSE,
+  ...
+)
 }
 \arguments{
 \item{secret}{The secret data name in Secret Manager}
@@ -13,12 +19,14 @@ cr_buildstep_secret(secret, decrypted, version = "latest", ...)
 
 \item{version}{The version of the secret}
 
+\item{binary_mode}{Should the file be treated in binary/raw format?}
+
 \item{...}{Other arguments sent to \link{cr_buildstep_bash}}
 }
 \description{
-This is the preferred way to manage secrets, rather than
+This is the preferred way to manage secrets for files, rather than
   \link{cr_buildstep_decrypt}, as it stores the encrypted file in the cloud
-  rather than in your project workspace.
+  rather than in your project workspace.  For single environment values, \link{cr_build_yaml_secrets} may be more suitable.
 }
 \details{
 This is for downloading encrypted files from Google Secret Manager.  You will need to add the
@@ -28,10 +36,11 @@ Once you have uploaded your secret file and named it, it is available for Cloud
 }
 \examples{
 cr_buildstep_secret("my_secret", decrypted = "/workspace/secret.json")
-
 }
 \seealso{
-How to set up secrets using \href{https://cloud.google.com/cloud-build/docs/securing-builds/use-encrypted-secrets-credentials}{Secret Manager}
+How to set up secrets using \href{https://cloud.google.com/build/docs/securing-builds/use-secrets}{Secret Manager}
+
+\link{cr_build_yaml_secrets} let you directly support environment arguments in the buildsteps
 
 Other Cloud Buildsteps: 
 \code{\link{cr_buildstep_bash}()},
@@ -44,10 +53,12 @@ Other Cloud Buildsteps:
 \code{\link{cr_buildstep_gitsetup}()},
 \code{\link{cr_buildstep_mailgun}()},
 \code{\link{cr_buildstep_nginx_setup}()},
+\code{\link{cr_buildstep_packagetests}()},
 \code{\link{cr_buildstep_pkgdown}()},
 \code{\link{cr_buildstep_run}()},
 \code{\link{cr_buildstep_r}()},
 \code{\link{cr_buildstep_slack}()},
+\code{\link{cr_buildstep_targets}()},
 \code{\link{cr_buildstep}()}
 }
 \concept{Cloud Buildsteps}

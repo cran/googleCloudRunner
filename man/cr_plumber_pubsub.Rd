@@ -24,23 +24,21 @@ The Docker container for the API will need to include \code{googleCloudRunner} i
 Use \link{cr_pubsub} to test this function once deployed.
 }
 \examples{
-
 \dontrun{
 
 # within a plumber api.R script:
 
 # example function echos back pubsub message
-pub <- function(x){
+pub <- function(x) {
   paste("Echo:", x)
 }
 
 #' Recieve pub/sub message
-#' @post /pubsub
+#' @post /pubsub #nolint
 #' @param message a pub/sub message
-function(message=NULL){
+function(message = NULL) {
   googleCloudRunner::cr_plumber_pubsub(message, pub)
-  }
-
+}
 }
 }
 \seealso{
@@ -48,8 +46,10 @@ function(message=NULL){
 
 Other Cloud Run functions: 
 \code{\link{cr_jwt_create}()},
+\code{\link{cr_run_email}()},
 \code{\link{cr_run_get}()},
 \code{\link{cr_run_list}()},
+\code{\link{cr_run_schedule_http}()},
 \code{\link{cr_run}()}
 }
 \concept{Cloud Run functions}

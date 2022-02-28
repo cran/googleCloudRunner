@@ -17,24 +17,25 @@ cr_buildtrigger_edit(BuildTrigger, triggerId, projectId = cr_project_get())
 Seems not to work at the moment (issue #16)
 }
 \examples{
-
 \dontrun{
 
 github <- GitHubEventsConfig("MarkEdmondson1234/googleCloudRunner",
-                            branch = "master")
+  branch = "master"
+)
 bt2 <- cr_buildtrigger("trig2",
-                       trigger = github,
-                       build = "inst/cloudbuild/cloudbuild.yaml")
+  trigger = github,
+  build = "inst/cloudbuild/cloudbuild.yaml"
+)
 bt3 <- BuildTrigger(
   filename = "inst/cloudbuild/cloudbuild.yaml",
   name = "edited1",
   tags = "edit",
   github = github,
   disabled = TRUE,
-  description = "edited trigger")
+  description = "edited trigger"
+)
 
 edited <- cr_buildtrigger_edit(bt3, triggerId = bt2)
-
 }
 
 }
@@ -46,8 +47,10 @@ Other BuildTrigger functions:
 \code{\link{cr_buildtrigger_delete}()},
 \code{\link{cr_buildtrigger_get}()},
 \code{\link{cr_buildtrigger_list}()},
+\code{\link{cr_buildtrigger_pubsub}()},
 \code{\link{cr_buildtrigger_repo}()},
 \code{\link{cr_buildtrigger_run}()},
+\code{\link{cr_buildtrigger_webhook}()},
 \code{\link{cr_buildtrigger}()}
 }
 \concept{BuildTrigger functions}

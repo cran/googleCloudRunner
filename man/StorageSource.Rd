@@ -25,19 +25,19 @@ StorageSource Object
 Location of the source in an archive file in Google Cloud Storage.
 }
 \examples{
-
 \dontrun{
 cr_project_set("my-project")
 cr_bucket_set("my-bucket")
 # construct Source object
-my_gcs_source <- Source(storageSource=StorageSource("my_code.tar.gz",
-                                                    "gs://my-bucket"))
+my_gcs_source <- Source(storageSource = StorageSource(
+  "my_code.tar.gz",
+  "gs://my-bucket"
+))
 build1 <- cr_build("cloudbuild.yaml", source = my_gcs_source)
 
 # helper that tars and adds to Source() for you
 my_gcs_source2 <- cr_build_upload_gcs("my_folder")
 build2 <- cr_build("cloudbuild.yaml", source = my_gcs_source2)
-
 }
 }
 \seealso{
@@ -46,12 +46,16 @@ Other Cloud Build functions:
 \code{\link{RepoSource}()},
 \code{\link{Source}()},
 \code{\link{cr_build_artifacts}()},
+\code{\link{cr_build_list}()},
+\code{\link{cr_build_logs}()},
 \code{\link{cr_build_make}()},
 \code{\link{cr_build_status}()},
+\code{\link{cr_build_targets}()},
 \code{\link{cr_build_upload_gcs}()},
 \code{\link{cr_build_wait}()},
 \code{\link{cr_build_write}()},
 \code{\link{cr_build_yaml_artifact}()},
+\code{\link{cr_build_yaml_secrets}()},
 \code{\link{cr_build_yaml}()},
 \code{\link{cr_build}()}
 }

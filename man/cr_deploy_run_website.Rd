@@ -35,11 +35,11 @@ cr_deploy_run_website(
 
 \item{r_image}{The image that will run the R code from \code{edit_r}}
 
-\item{allowUnauthenticated}{TRUE if can be reached from public HTTP address.}
+\item{allowUnauthenticated}{TRUE if can be reached from public HTTP address. If FALSE will configure a service-email called \code{(name)-cloudrun-invoker@(project-id).iam.gserviceaccount.com}}
 
 \item{region}{The region for cloud run}
 
-\item{projectId}{The project to build under}
+\item{projectId}{The GCP projectId which will be deployed within}
 }
 \description{
 This lets you set up triggers that will update an R generated website each commit.
@@ -53,7 +53,6 @@ This default R code is rendered in the rmd_folder:
       rmarkdown::render, output_format = 'html_document')}
 }
 \examples{
-
 \dontrun{
 cr_project_set("my-project")
 cr_region_set("europe-west1")
@@ -64,10 +63,10 @@ cr_deploy_run_website(your_repo, rmd_folder = "vignettes")
 r <- "devtools::install();pkgdown::build_site()"
 
 cr_deploy_run_website(your_repo,
-                   image = paste0(your_repo, "-pkgdown"),
-                   rmd_folder = ".",
-                   edit_r = r)
-
+  image = paste0(your_repo, "-pkgdown"),
+  rmd_folder = ".",
+  edit_r = r
+)
 }
 }
 \seealso{

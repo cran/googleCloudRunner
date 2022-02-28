@@ -13,7 +13,8 @@ cr_buildstep(
   dir = "",
   env = NULL,
   waitFor = NULL,
-  volumes = NULL
+  volumes = NULL,
+  secretEnv = NULL
 )
 }
 \arguments{
@@ -23,7 +24,7 @@ cr_buildstep(
 
 \item{id}{Optional id for the step}
 
-\item{prefix}{prefixed to name - set to "" to suppress.  Will be suppressed if \code{name} starts with gcr.io}
+\item{prefix}{prefixed to name - set to "" to suppress.  Will be suppressed if \code{name} starts with gcr.io or \code{*-docker.pkg.dev}}
 
 \item{entrypoint}{change the entrypoint for the docker container}
 
@@ -34,6 +35,8 @@ cr_buildstep(
 \item{waitFor}{Whether to wait for previous buildsteps to complete before running.  Default it will wait for previous step.}
 
 \item{volumes}{volumes to connect and write to}
+
+\item{secretEnv}{A list of secrets stored in Secret Manager referred to in args via a \code{$$var}}
 }
 \description{
 Helper for creating build steps for upload to Cloud Build
@@ -44,7 +47,7 @@ This uses R to make building steps for cloudbuild.yml files harder to make mista
 \section{WaitFor}{
 
 
-By default each buildstep waits for the previous, but if you pass \code{"-"} then it will start immediately, or if you pass in a list of ids it will wait for previous buildsteps to finish who have that id.  See \href{https://cloud.google.com/cloud-build/docs/configuring-builds/configure-build-step-order}{Configuring Build Step Order} for details.
+By default each buildstep waits for the previous, but if you pass \code{"-"} then it will start immediately, or if you pass in a list of ids it will wait for previous buildsteps to finish who have that id.  See \href{https://cloud.google.com/build/docs/configuring-builds/configure-build-step-order}{Configuring Build Step Order} for details.
 }
 
 \section{Build Macros}{
@@ -64,45 +67,62 @@ Fields can include the following variables, which will be expanded when the buil
 Or you can add your own custom variables, set in the Build Trigger.  Custom variables always start with $_ e.g. $_MY_VAR
 }
 
+\section{secretEnv}{
+
+
+You can pass secrets that are stored in Secret Manager directly instead of using a dedicated buildstep via \link{cr_buildstep_secret}
+
+Within the code passed to \code{args} those secrets are referred to via \code{$$SECRET_NAME}.  If used then \link{cr_build_yaml} must also include the \code{availableSecrets} argument.
+}
+
 \examples{
 cr_project_set("my-project")
 cr_bucket_set("my-bucket")
 # creating yaml for use in deploying cloud run
-image = "gcr.io/my-project/my-image:$BUILD_ID"
+image <- "gcr.io/my-project/my-image:$BUILD_ID"
 cr_build_yaml(
-    steps = c(
-         cr_buildstep("docker", c("build","-t",image,".")),
-         cr_buildstep("docker", c("push",image)),
-         cr_buildstep("gcloud", c("beta","run","deploy", "test1",
-                                   "--image", image))),
-    images = image)
+  steps = c(
+    cr_buildstep("docker", c("build", "-t", image, ".")),
+    cr_buildstep("docker", c("push", image)),
+    cr_buildstep("gcloud", c(
+      "beta", "run", "deploy", "test1",
+      "--image", image
+    ))
+  ),
+  images = image
+)
 
 # use premade docker buildstep - combine using c()
-image = "gcr.io/my-project/my-image"
+image <- "gcr.io/my-project/my-image"
 cr_build_yaml(
-    steps = c(cr_buildstep_docker(image),
-              cr_buildstep("gcloud",
-                     args = c("beta","run","deploy",
-                              "test1","--image", image))
-             ),
-    images = image)
+  steps = c(
+    cr_buildstep_docker(image),
+    cr_buildstep("gcloud",
+      args = c(
+        "beta", "run", "deploy",
+        "test1", "--image", image
+      )
+    )
+  ),
+  images = image
+)
 
 # list files with a new entrypoint for gcloud
-cr_build_yaml(steps = cr_buildstep("gcloud", c("-c","ls -la"),
-                                   entrypoint = "bash"))
+cr_build_yaml(steps = cr_buildstep("gcloud", c("-c", "ls -la"),
+  entrypoint = "bash"
+))
 
 # to call from images not using gcr.io/cloud-builders stem
-cr_buildstep("alpine", c("-c","ls -la"), entrypoint = "bash", prefix="")
+cr_buildstep("alpine", c("-c", "ls -la"), entrypoint = "bash", prefix = "")
 
 # to add environment arguments to the step
 cr_buildstep("docker", "version", env = c("ENV1=env1", "ENV2=$PROJECT_ID"))
 
 # to add volumes wrap in list()
 cr_buildstep("test", "ls", volumes = list(list(name = "ssh", path = "/root/.ssh")))
-
 }
 \seealso{
-\href{https://cloud.google.com/cloud-build/docs/configuring-builds/use-community-and-custom-builders}{Creating custom build steps how-to guide}
+\href{https://cloud.google.com/build/docs/configuring-builds/use-community-and-custom-builders}{Creating custom build steps how-to guide}
 
 Other Cloud Buildsteps: 
 \code{\link{cr_buildstep_bash}()},
@@ -115,10 +135,12 @@ Other Cloud Buildsteps:
 \code{\link{cr_buildstep_gitsetup}()},
 \code{\link{cr_buildstep_mailgun}()},
 \code{\link{cr_buildstep_nginx_setup}()},
+\code{\link{cr_buildstep_packagetests}()},
 \code{\link{cr_buildstep_pkgdown}()},
 \code{\link{cr_buildstep_run}()},
 \code{\link{cr_buildstep_r}()},
 \code{\link{cr_buildstep_secret}()},
-\code{\link{cr_buildstep_slack}()}
+\code{\link{cr_buildstep_slack}()},
+\code{\link{cr_buildstep_targets}()}
 }
 \concept{Cloud Buildsteps}

@@ -4,7 +4,12 @@
 \alias{cr_schedule_delete}
 \title{Deletes a scheduled job.}
 \usage{
-cr_schedule_delete(x, region = cr_region_get(), projectId = cr_project_get())
+cr_schedule_delete(
+  x,
+  region = cr_region_get(),
+  projectId = cr_project_get(),
+  pubsub_cleanup = FALSE
+)
 }
 \arguments{
 \item{x}{The name of the scheduled job or a \link{Job} object}
@@ -12,6 +17,11 @@ cr_schedule_delete(x, region = cr_region_get(), projectId = cr_project_get())
 \item{region}{The region to run within}
 
 \item{projectId}{The projectId}
+
+\item{pubsub_cleanup}{If the Cloud Scheduler is pointing at a Build Trigger/PubSub as deployed by \link{cr_deploy_r} will attempt to clean up those resources too.}
+}
+\value{
+\code{TRUE} if job not found or its deleted, \code{FALSE} if it could not delete the job
 }
 \description{
 Deletes a scheduled job.
@@ -22,6 +32,7 @@ Deletes a scheduled job.
 cr_project_set("my-project")
 cr_region_set("europe-west1")
 cr_schedule_delete("cloud-build-test1")
+
 }
 }
 \seealso{
@@ -30,11 +41,12 @@ cr_schedule_delete("cloud-build-test1")
 Other Cloud Scheduler functions: 
 \code{\link{HttpTarget}()},
 \code{\link{Job}()},
+\code{\link{PubsubTarget}()},
 \code{\link{cr_build_schedule_http}()},
+\code{\link{cr_run_schedule_http}()},
 \code{\link{cr_schedule_get}()},
 \code{\link{cr_schedule_list}()},
 \code{\link{cr_schedule_pause}()},
-\code{\link{cr_schedule_run}()},
-\code{\link{cr_schedule}()}
+\code{\link{cr_schedule_run}()}
 }
 \concept{Cloud Scheduler functions}

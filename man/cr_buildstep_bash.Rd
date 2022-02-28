@@ -8,6 +8,7 @@ cr_buildstep_bash(
   bash_script,
   name = "ubuntu",
   bash_source = c("local", "runtime"),
+  escape_dollar = TRUE,
   ...
 )
 }
@@ -17,6 +18,8 @@ cr_buildstep_bash(
 \item{name}{The image that will run the R code}
 
 \item{bash_source}{Whether the code will be from a runtime file within the source or at build time copying over from a local file in your session}
+
+\item{escape_dollar}{Default TRUE.  This will turn \code{$} into \code{$$} within the script to avoid them being recognised as Cloud Build variables.  Turn this off if you want that behaviour (e.g. \code{my_project="$PROJECT_ID"})}
 
 \item{...}{Other arguments passed to \link{cr_buildstep}}
 }
@@ -30,8 +33,7 @@ If you need to escape build parameters in bash scripts, you need to escape Cloud
 cr_project_set("my-project")
 bs <- cr_build_yaml(
   steps = cr_buildstep_bash("echo 'Hello'")
- )
-
+)
 \dontrun{
 cr_build(bs)
 }
@@ -47,11 +49,13 @@ Other Cloud Buildsteps:
 \code{\link{cr_buildstep_gitsetup}()},
 \code{\link{cr_buildstep_mailgun}()},
 \code{\link{cr_buildstep_nginx_setup}()},
+\code{\link{cr_buildstep_packagetests}()},
 \code{\link{cr_buildstep_pkgdown}()},
 \code{\link{cr_buildstep_run}()},
 \code{\link{cr_buildstep_r}()},
 \code{\link{cr_buildstep_secret}()},
 \code{\link{cr_buildstep_slack}()},
+\code{\link{cr_buildstep_targets}()},
 \code{\link{cr_buildstep}()}
 }
 \concept{Cloud Buildsteps}

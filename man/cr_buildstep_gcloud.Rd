@@ -14,13 +14,14 @@ cr_buildstep_gcloud(component = c("gcloud", "bq", "gsutil", "kubectl"), ...)
   \describe{
     \item{\code{name}}{name of docker image to call appended to \code{prefix}}
     \item{\code{args}}{character vector of arguments}
-    \item{\code{prefix}}{prefixed to name - set to "" to suppress.  Will be suppressed if \code{name} starts with gcr.io}
+    \item{\code{prefix}}{prefixed to name - set to "" to suppress.  Will be suppressed if \code{name} starts with gcr.io or \code{*-docker.pkg.dev}}
     \item{\code{entrypoint}}{change the entrypoint for the docker container}
     \item{\code{dir}}{The directory to use, relative to /workspace e.g. /workspace/deploy/}
     \item{\code{id}}{Optional id for the step}
     \item{\code{env}}{Environment variables for this step.  A character vector for each assignment}
     \item{\code{volumes}}{volumes to connect and write to}
     \item{\code{waitFor}}{Whether to wait for previous buildsteps to complete before running.  Default it will wait for previous step.}
+    \item{\code{secretEnv}}{A list of secrets stored in Secret Manager referred to in args via a \code{$$var}}
   }}
 }
 \description{
@@ -39,11 +40,13 @@ Other Cloud Buildsteps:
 \code{\link{cr_buildstep_gitsetup}()},
 \code{\link{cr_buildstep_mailgun}()},
 \code{\link{cr_buildstep_nginx_setup}()},
+\code{\link{cr_buildstep_packagetests}()},
 \code{\link{cr_buildstep_pkgdown}()},
 \code{\link{cr_buildstep_run}()},
 \code{\link{cr_buildstep_r}()},
 \code{\link{cr_buildstep_secret}()},
 \code{\link{cr_buildstep_slack}()},
+\code{\link{cr_buildstep_targets}()},
 \code{\link{cr_buildstep}()}
 }
 \concept{Cloud Buildsteps}

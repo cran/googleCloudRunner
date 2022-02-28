@@ -12,8 +12,10 @@ cr_build_yaml(
   substitutions = NULL,
   tags = NULL,
   secrets = NULL,
+  availableSecrets = NULL,
   images = NULL,
-  artifacts = NULL
+  artifacts = NULL,
+  serviceAccount = NULL
 )
 }
 \arguments{
@@ -31,9 +33,13 @@ cr_build_yaml(
 
 \item{secrets}{A secrets object}
 
+\item{availableSecrets}{What environment arguments from Secret Manager are available to the build - create via \link{cr_build_yaml_secrets}}
+
 \item{images}{What images will be build from this cloudbuild}
 
-\item{artifacts}{What artifacts may be built from this cloudbuild}
+\item{artifacts}{What artifacts may be built from this cloudbuild - create via \link{cr_build_yaml_artifact}}
+
+\item{serviceAccount}{What service account should the build be run under?}
 }
 \description{
 This can be written to disk or used directly with functions such as \link{cr_build}
@@ -41,14 +47,17 @@ This can be written to disk or used directly with functions such as \link{cr_bui
 \examples{
 cr_project_set("my-project")
 image <- "gcr.io/my-project/my-image"
-cr_build_yaml(steps = c(
-    cr_buildstep("docker", c("build","-t",image,".")),
-    cr_buildstep("docker", c("push",image)),
-    cr_buildstep("gcloud", c("beta","run","deploy", "test1", "--image", image))),
-  images = image)
+cr_build_yaml(
+  steps = c(
+    cr_buildstep("docker", c("build", "-t", image, ".")),
+    cr_buildstep("docker", c("push", image)),
+    cr_buildstep("gcloud", c("beta", "run", "deploy", "test1", "--image", image))
+  ),
+  images = image
+)
 }
 \seealso{
-\href{https://cloud.google.com/cloud-build/docs/build-config}{Build configuration overview for cloudbuild.yaml}
+\href{https://cloud.google.com/build/docs/build-config-file-schema}{Build configuration overview for cloudbuild.yaml}
 
 Other Cloud Build functions: 
 \code{\link{Build}()},
@@ -56,12 +65,16 @@ Other Cloud Build functions:
 \code{\link{Source}()},
 \code{\link{StorageSource}()},
 \code{\link{cr_build_artifacts}()},
+\code{\link{cr_build_list}()},
+\code{\link{cr_build_logs}()},
 \code{\link{cr_build_make}()},
 \code{\link{cr_build_status}()},
+\code{\link{cr_build_targets}()},
 \code{\link{cr_build_upload_gcs}()},
 \code{\link{cr_build_wait}()},
 \code{\link{cr_build_write}()},
 \code{\link{cr_build_yaml_artifact}()},
+\code{\link{cr_build_yaml_secrets}()},
 \code{\link{cr_build}()}
 }
 \concept{Cloud Build functions}

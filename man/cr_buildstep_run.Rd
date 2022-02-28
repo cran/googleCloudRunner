@@ -15,6 +15,7 @@ cr_buildstep_run(
   memory = "256Mi",
   cpu = 1,
   env_vars = NULL,
+  gcloud_args = NULL,
   ...
 )
 }
@@ -23,7 +24,7 @@ cr_buildstep_run(
 
 \item{image}{The name of the image to create or use in deployment - \code{gcr.io}}
 
-\item{allowUnauthenticated}{TRUE if can be reached from public HTTP address.}
+\item{allowUnauthenticated}{TRUE if can be reached from public HTTP address. If FALSE will configure a service-email called \code{(name)-cloudrun-invoker@(project-id).iam.gserviceaccount.com}}
 
 \item{region}{The endpoint region for deployment}
 
@@ -39,12 +40,16 @@ cr_buildstep_run(
 
 \item{env_vars}{Environment arguments passed to the Cloud Run container at runtime.  Distinct from \code{env} that run at build time.}
 
+\item{gcloud_args}{a character string of arguments that can be sent to the gcloud command not covered by other parameters of this function}
+
 \item{...}{passed on to \link{cr_buildstep}}
 }
 \description{
 Create buildsteps to deploy to Cloud Run
 }
 \seealso{
+Docs for \href{https://cloud.google.com/sdk/gcloud/reference/run/deploy}{gcloud run deploy this buildstep invokes}
+
 Other Cloud Buildsteps: 
 \code{\link{cr_buildstep_bash}()},
 \code{\link{cr_buildstep_decrypt}()},
@@ -56,10 +61,12 @@ Other Cloud Buildsteps:
 \code{\link{cr_buildstep_gitsetup}()},
 \code{\link{cr_buildstep_mailgun}()},
 \code{\link{cr_buildstep_nginx_setup}()},
+\code{\link{cr_buildstep_packagetests}()},
 \code{\link{cr_buildstep_pkgdown}()},
 \code{\link{cr_buildstep_r}()},
 \code{\link{cr_buildstep_secret}()},
 \code{\link{cr_buildstep_slack}()},
+\code{\link{cr_buildstep_targets}()},
 \code{\link{cr_buildstep}()}
 }
 \concept{Cloud Buildsteps}

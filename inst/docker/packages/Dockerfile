@@ -12,5 +12,11 @@ RUN install2.r --error \
     rcmdcheck \
     remotes \
     rhub \
-    rmarkdown
+    rmarkdown \
+    markdown
 
+# fork with googleCloudRunner support
+RUN installGithub.r \
+    -r 'http://cran.rstudio.com' \
+    MarkEdmondson1234/covr \
+    r-lib/revdepcheck

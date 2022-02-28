@@ -10,7 +10,7 @@ cr_deploy_packagetests(
   env = c("NOT_CRAN=true"),
   test_script = NULL,
   codecov_script = NULL,
-  codecov_token = "$_CODECOV",
+  codecov_token = "$_CODECOV_TOKEN",
   build_image = "gcr.io/gcer-public/packagetools:latest",
   create_trigger = c("file", "inline", "no"),
   trigger_repo = NULL,
@@ -24,9 +24,9 @@ cr_deploy_packagetests(
 
 \item{env}{Environment arguments to be set during the test script runs}
 
-\item{test_script}{The script that will perform tests.  If \code{NULL} a default script is used in \code{system.file("r_buildsteps", "devtools_tests.R")}}
+\item{test_script}{The script that will call \link[rcmdcheck]{rcmdcheck} to perform tests.  If \code{NULL} a default script is used in \code{system.file("r_buildsteps", "devtools_tests.R", package="googlecloudRunner")}}
 
-\item{codecov_script}{The script that will perform coverage.  If \code{NULL} a default script is used in \code{system.file("r_buildsteps", "codecov_tests.R")}}
+\item{codecov_script}{The script that will call \link[covr]{codecov} to perform coverage.  If \code{NULL} a default script is used in \code{system.file("r_buildsteps", "codecov_tests.R", package="googleCloudRunner")}}
 
 \item{codecov_token}{If using codecov, supply your codecov token here.}
 
@@ -41,11 +41,14 @@ cr_deploy_packagetests(
   \describe{
     \item{\code{yaml}}{A \code{Yaml} object created from \link{cr_build_yaml} or a file location of a .yaml/.yml cloud build file}
     \item{\code{artifacts}}{Artifacts that may be built via \link{cr_build_yaml_artifact}}
-    \item{\code{options}}{Options}
+    \item{\code{options}}{Options to pass to a Cloud Build}
+    \item{\code{availableSecrets}}{Secret Manager objects built by \link{cr_build_yaml_secrets}}
+    \item{\code{logsBucket}}{The gs:// location of a bucket to put logs in}
     \item{\code{source}}{A \link{Source} object specifying the location of the source files to build, usually created by \link{cr_build_source}}
     \item{\code{timeout}}{Amount of time that this build should be allowed to run, to second}
     \item{\code{images}}{A list of images to be pushed upon the successful completion of all build}
     \item{\code{substitutions}}{Substitutions data for `Build` resource}
+    \item{\code{serviceAccount}}{service account email to be used for the build}
   }}
 }
 \description{
@@ -77,8 +80,8 @@ cr_deploy_packagetests(
 
 # creating a buildtrigger repo for trigger_repo
 repo <- cr_buildtrigger_repo("MarkEdmondson1234/googleCloudRunner",
-                             branch = "master")
-
+  branch = "master"
+)
 \dontrun{
 
 # will create the file in the repo, and point a buildtrigger at it
@@ -90,10 +93,11 @@ cr_deploy_packagetests(create_trigger = "inline", trigger_repo = repo)
 }
 
 unlink("cloudbuild-tests.yml")
-
 }
 \seealso{
 Create your own custom deployment using \link{cr_buildstep_packagetests} which this function uses with some defaults
+
+\link{cr_buildstep_packagetests}
 
 Other Deployment functions: 
 \code{\link{cr_deploy_docker_trigger}()},

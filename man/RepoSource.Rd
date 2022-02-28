@@ -47,15 +47,20 @@ cr_bucket_set("my-bucket")
 
 my_repo <- cr_build_source(
   RepoSource("github_markedmondson1234_googlecloudrunner",
-             branchName="master"))
+    branchName = "master"
+  )
+)
 
 build <- cr_build(
-  cr_build_yaml(steps =
-    cr_buildstep("gcloud", c("-c","ls -la"),
-                  entrypoint = "bash",
-                  dir = "")),
- source = my_repo)
-
+  cr_build_yaml(
+    steps =
+      cr_buildstep("gcloud", c("-c", "ls -la"),
+        entrypoint = "bash",
+        dir = ""
+      )
+  ),
+  source = my_repo
+)
 }
 }
 \seealso{
@@ -64,12 +69,16 @@ Other Cloud Build functions:
 \code{\link{Source}()},
 \code{\link{StorageSource}()},
 \code{\link{cr_build_artifacts}()},
+\code{\link{cr_build_list}()},
+\code{\link{cr_build_logs}()},
 \code{\link{cr_build_make}()},
 \code{\link{cr_build_status}()},
+\code{\link{cr_build_targets}()},
 \code{\link{cr_build_upload_gcs}()},
 \code{\link{cr_build_wait}()},
 \code{\link{cr_build_write}()},
 \code{\link{cr_build_yaml_artifact}()},
+\code{\link{cr_build_yaml_secrets}()},
 \code{\link{cr_build_yaml}()},
 \code{\link{cr_build}()}
 }

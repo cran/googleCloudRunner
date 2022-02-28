@@ -5,13 +5,14 @@
 \title{Copy a buildtrigger}
 \usage{
 cr_buildtrigger_copy(
-  buildtrigger,
+  buildTrigger,
   filename = NULL,
   name = NULL,
   tags = NULL,
   build = NULL,
   ignoredFiles = NULL,
   github = NULL,
+  sourceToBuild = NULL,
   substitutions = NULL,
   includedFiles = NULL,
   disabled = NULL,
@@ -20,7 +21,7 @@ cr_buildtrigger_copy(
 )
 }
 \arguments{
-\item{buildtrigger}{A \code{CloudBuildTriggerResponse} object from \link{cr_buildtrigger_get}}
+\item{buildTrigger}{A \code{CloudBuildTriggerResponse} object from \link{cr_buildtrigger_get}}
 
 \item{filename}{Path, from the source root, to a file whose contents is used for the build}
 
@@ -33,6 +34,8 @@ cr_buildtrigger_copy(
 \item{ignoredFiles}{ignored_files and included_files are file glob matches extended with support for "**".}
 
 \item{github}{a \link{GitHubEventsConfig} object - mutually exclusive with \code{triggerTemplate}}
+
+\item{sourceToBuild}{A \link{cr_buildtrigger_repo} object (but no regex allowed for branch or tag)  This field is currently only used by Webhook, Pub/Sub, Manual, and Cron triggers and is the source of the build will execute upon.}
 
 \item{substitutions}{A named list of Build macro variables}
 
@@ -51,21 +54,19 @@ This lets you use the response from \link{cr_buildtrigger_get} for an existing b
 Overwrite settings for the build trigger you are copying by supplying it as one of the other arguments from \link{BuildTrigger}.
 }
 \examples{
-
 \dontrun{
-#copying a GitHub buildtrigger across projects and git repos
+# copying a GitHub buildtrigger across projects and git repos
 bt <- cr_buildtrigger_get("my-trigger", projectId = "my-project-1")
 
 # a new GitHub project
 gh <- GitHubEventsConfig("username/new-repo",
-                         event = "push",
-                         branch = "^master$")
+  event = "push",
+  branch = "^master$"
+)
 
 # give 'Cloud Build Editor' role to your service auth key in new project
 # then copy configuration across
 cr_buildtrigger_copy(bt, github = gh, projectId = "my-new-project")
-
-
 }
 }
 \seealso{
@@ -76,8 +77,10 @@ Other BuildTrigger functions:
 \code{\link{cr_buildtrigger_edit}()},
 \code{\link{cr_buildtrigger_get}()},
 \code{\link{cr_buildtrigger_list}()},
+\code{\link{cr_buildtrigger_pubsub}()},
 \code{\link{cr_buildtrigger_repo}()},
 \code{\link{cr_buildtrigger_run}()},
+\code{\link{cr_buildtrigger_webhook}()},
 \code{\link{cr_buildtrigger}()}
 }
 \concept{BuildTrigger functions}

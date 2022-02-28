@@ -6,17 +6,15 @@ options:
   - 'GCS_DEFAULT_BUCKET=$_BUCKET'
   - 'GCE_AUTH_FILE=/workspace/auth.json'
   - 'NOT_CRAN=true'
+  - 'GCP_AUTH_FILE=/workspace/auth.json'
+  - 'GCP_PROJECT=$PROJECT_ID'
 timeout: "2400s"
 steps:
-- name: 'gcr.io/cloud-builders/gcloud'
+- name: gcr.io/cloud-builders/gcloud
+  entrypoint: bash
   args:
-  - kms
-  - decrypt
-  - --ciphertext-file=auth.json.enc
-  - --plaintext-file=auth.json
-  - --location=global
-  - --keyring=my-keyring
-  - --key=gce-auth-file
+  - -c
+  - gcloud secrets versions access latest --secret=googlecloudrunner-test-key > /workspace/auth.json
 - name: 'gcr.io/gcer-public/packagetools:latest'
   id: Devtools checks
   args:
@@ -25,6 +23,7 @@ steps:
   - |
     message("cran mirror: ", getOption("repos"))
     remotes::install_deps(dependencies = TRUE)
+    remotes::install_local()
     rcmdcheck::rcmdcheck(args = '--no-manual', error_on = 'warning')
 - name: 'gcr.io/gcer-public/packagetools:latest'
   id: Good Practices
@@ -42,7 +41,8 @@ steps:
   - "Rscript"
   - "-e"
   - |
+    remotes::install_deps(dependencies = TRUE)
     remotes::install_local()
     cv <- covr::package_coverage()
-    print(cv);
+    print(cv)
     covr::codecov(coverage=cv, commit = '$COMMIT_SHA', branch = '$BRANCH_NAME')
